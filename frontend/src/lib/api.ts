@@ -20,6 +20,7 @@ class ApiClient {
     const headers = new Headers(options.headers || {});
     
     headers.set('Content-Type', 'application/json');
+    headers.set('X-SECRET-TOKEN', 'my-secure-api-key-123');
     if (this.token) {
       headers.set('Authorization', `Bearer ${this.token}`);
     }

@@ -18,9 +18,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API routers
-app.include_router(partner.router)
-app.include_router(transactions.router)
+from fastapi import Header, HTTPException, status, Depends
+import os
+
+API_KEY = os.getenv("BACKEND_SECRET_TOKEN", "my-secure-api-key-123")
+
+async def verify_api_key(x_secret_token: str = Header(None, alias="X-SECRET-TOKEN")):
+    if not x_secret_token or x_secret_token != API_KEY:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Forbidden: Invalid or missing X-SECRET-TOKEN header"
+        )
+
+# Include API routers with API Key authentication
+app.include_router(partner.router, dependencies=[Depends(verify_api_key)])
+app.include_router(transactions.router, dependencies=[Depends(verify_api_key)])
 
 @app.get("/")
 async def root():

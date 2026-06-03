@@ -23,7 +23,7 @@ export default function AnalyticsScreen() {
 
   // Filter expenses
   const expenses = transactions.filter((t) => t.type === 'expense');
-  const totalExpense = expenses.reduce((sum, t) => sum + Number(t.amount), 0);
+  const totalExpense = expenses.reduce((sum, t) => sum + Number(t.amount || 0), 0);
 
   // Group by category
   const categoriesMap: { [key: string]: { spent: number; limit: number; color: string } } = {
@@ -41,13 +41,13 @@ export default function AnalyticsScreen() {
       tx.category.toLowerCase().includes(cat.toLowerCase())
     );
     if (matchedCat) {
-      categoriesMap[matchedCat].spent += Number(tx.amount);
+      categoriesMap[matchedCat].spent += Number(tx.amount || 0);
     } else {
       // Default to Other
       if (!categoriesMap['Other']) {
         categoriesMap['Other'] = { spent: 0, limit: 500, color: colors.textSecondary };
       }
-      categoriesMap['Other'].spent += Number(tx.amount);
+      categoriesMap['Other'].spent += Number(tx.amount || 0);
     }
   });
 

@@ -35,9 +35,7 @@ export default function HomeScreen() {
     setTheme
   } = useBudgetStore();
 
-  const [email, setEmail] = useState('');
-  const [showAuthForm, setShowAuthForm] = useState(false);
-  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [secretPhrase, setSecretPhrase] = useState('');
   const [authError, setAuthError] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
 
@@ -53,36 +51,39 @@ export default function HomeScreen() {
     }
   }, [token]);
 
-  const handleAuth = async () => {
+  const handleUnlock = async () => {
     setAuthError(null);
-    if (!email.trim() || !email.includes('@')) {
-      setAuthError('Please enter a valid email address.');
+    const phrase = secretPhrase.trim();
+    if (!phrase) {
+      setAuthError('Please enter your secret phrase.');
+      return;
+    }
+    let targetEmail = '';
+    if (phrase === 'alex-secure-phrase-777') {
+      targetEmail = 'alex@example.com';
+    } else if (phrase === 'taylor-secure-phrase-888') {
+      targetEmail = 'taylor@example.com';
+    } else {
+      setAuthError('Access Denied: Invalid secret phrase.');
       return;
     }
     try {
-      await login(email.trim());
+      await login(targetEmail);
     } catch (err: any) {
-      setAuthError(err.message || 'Authentication failed');
+      setAuthError(err.message || 'Unlock failed');
     }
   };
 
-  // Log out action
-  const handleLogout = () => {
-    logout();
-    setEmail('');
-    setShowAuthForm(false);
-  };
-
   if (!token) {
-    // RENDER WELCOME / SPLASH SCREEN
+    // RENDER GATEKEEPER / ACCESS VERIFICATION SCREEN
     return (
       <SafeAreaView style={[styles.welcomeContainer, { backgroundColor: colors.background }]}>
         <StatusBar barStyle={scheme === 'dark' ? 'light-content' : 'dark-content'} />
         <ScrollView contentContainerStyle={styles.welcomeScroll}>
           {/* Welcome Text */}
-          <Text style={[styles.welcomeTitle, { color: colors.text }]}>Welcome</Text>
+          <Text style={[styles.welcomeTitle, { color: colors.text }]}>Caroline Budget</Text>
           <Text style={[styles.welcomeSubtitle, { color: colors.textSecondary }]}>
-            All your budget in one place
+            Enter secret phrase to unlock shared budget
           </Text>
 
           {/* Premium Geometric CSS Illustration */}
@@ -93,57 +94,28 @@ export default function HomeScreen() {
             <View style={[styles.accentCircle, { backgroundColor: colors.expense }]} />
           </View>
 
-          {/* Auth Forms */}
-          {showAuthForm ? (
-            <View style={styles.formContainer}>
-              <Text style={[styles.formLabel, { color: colors.text }]}>
-                {authMode === 'signin' ? 'Sign In' : 'Create an Account'}
-              </Text>
-              {authError && <Text style={styles.formError}>{authError}</Text>}
-              <TextInput
-                style={[
-                  styles.input,
-                  { color: colors.text, borderColor: colors.border, backgroundColor: colors.backgroundElement },
-                ]}
-                placeholder="Enter your email"
-                placeholderTextColor={colors.textSecondary}
-                keyboardType="email-address"
-                autoCapitalize="none"
-                value={email}
-                onChangeText={setEmail}
-              />
-              <TouchableOpacity
-                style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-                onPress={handleAuth}
-              >
-                <Text style={styles.primaryBtnText}>Continue</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.backBtn} onPress={() => setShowAuthForm(false)}>
-                <Text style={[styles.backBtnText, { color: colors.primary }]}>Back</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.buttonContainer}>
-              <TouchableOpacity
-                style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-                onPress={() => {
-                  setAuthMode('signup');
-                  setShowAuthForm(true);
-                }}
-              >
-                <Text style={styles.primaryBtnText}>Create an Account</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.secondaryBtn, { backgroundColor: colors.backgroundElement }]}
-                onPress={() => {
-                  setAuthMode('signin');
-                  setShowAuthForm(true);
-                }}
-              >
-                <Text style={[styles.secondaryBtnText, { color: colors.text }]}>Sign In</Text>
-              </TouchableOpacity>
-            </View>
-          )}
+          {/* Gatekeeper Form */}
+          <View style={styles.formContainer}>
+            {authError && <Text style={styles.formError}>{authError}</Text>}
+            <TextInput
+              style={[
+                styles.input,
+                { color: colors.text, borderColor: colors.border, backgroundColor: colors.backgroundElement },
+              ]}
+              placeholder="Enter Secret Phrase"
+              placeholderTextColor={colors.textSecondary}
+              secureTextEntry
+              autoCapitalize="none"
+              value={secretPhrase}
+              onChangeText={setSecretPhrase}
+            />
+            <TouchableOpacity
+              style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+              onPress={handleUnlock}
+            >
+              <Text style={styles.primaryBtnText}>Unlock Budget</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       </SafeAreaView>
     );
@@ -158,7 +130,7 @@ export default function HomeScreen() {
   const calculateCategorySpent = (catName: string) => {
     return transactions
       .filter((t) => t.category.toLowerCase().includes(catName.toLowerCase()) && t.type === 'expense')
-      .reduce((sum, t) => sum + Number(t.amount), 0);
+      .reduce((sum, t) => sum + Number(t.amount || 0), 0);
   };
 
   const categoriesToRender = [

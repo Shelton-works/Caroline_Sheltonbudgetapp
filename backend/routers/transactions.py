@@ -161,17 +161,18 @@ async def create_transaction(tx_in: TransactionCreate, current_user: dict = Depe
             current_budget = MOCK_BUDGET_GROUPS.get(group_id, {"fluid_balance": 0.00})
 
     # Calculate new fluid balance
-    current_balance = float(current_budget["fluid_balance"])
+    current_balance = float(current_budget.get("fluid_balance") or 0.0)
+    tx_amount = float(tx_in.amount or 0.0)
     if tx_in.type == "expense":
-        new_balance = current_balance - tx_in.amount
+        new_balance = current_balance - tx_amount
     else: # income injection
-        new_balance = current_balance + tx_in.amount
+        new_balance = current_balance + tx_amount
 
     new_tx = {
         "id": str(uuid.uuid4()),
         "group_id": group_id,
         "profile_id": user_id,
-        "amount": tx_in.amount,
+        "amount": tx_amount,
         "type": tx_in.type,
         "category": tx_in.category,
         "memo": tx_in.memo,
