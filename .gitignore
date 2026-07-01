@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.env
+.venv/
+venv/
+
+# Node / Expo
+node_modules/
+.expo/
+dist/
+build/
+*.log
+
+# OS / temp
+.DS_Store
+Thumbs.db
+tmp-test-file.bin
+C*tmp-test-file.bin
+nul
+frontend/nul
+electron/NUL

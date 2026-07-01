@@ -1,0 +1,14 @@
+fastapi>=0.110.0
+uvicorn>=0.28.0
+pydantic>=2.6.0
+python-multipart>=0.0.9
+httpx>=0.27.0
+requests>=2.31.0
+packaging>=23.0
+# Optional (Android only): pyjnius  (pip install pyjnius)
+#   Used by updater.py to invoke the Android PackageInstaller intent.
+#   Falls back to 'pm install' shell command if unavailable.
+
+# Dev / Testing
+pytest>=8.0.0
+pytest-mock>=3.14.0
