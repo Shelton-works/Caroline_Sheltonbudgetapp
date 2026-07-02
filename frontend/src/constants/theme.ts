@@ -243,7 +243,7 @@ export const NeomorphicShadows = {
   }),
 } as const;
 
-export const NeomorphicExtrudedBtn = Platform.select({
+export const NeomorphicExtrudedBtn: Record<string, any> = Platform.select({
   web: {
     backgroundImage: 'linear-gradient(145deg, #E2725B, #9F402D)',
     boxShadow: '4px 4px 8px #D1D9E6, -4px -4px 8px #FFFFFF',
@@ -255,4 +255,4 @@ export const NeomorphicExtrudedBtn = Platform.select({
     shadowRadius: 8,
     elevation: 4,
   },
-}) as any;
+});

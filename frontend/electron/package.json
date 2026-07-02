@@ -17,7 +17,7 @@
     "files": [
       "main.js",
       "preload.js",
-      "renderer/**/*"
+      "../dist/**/*"
     ],
     "win": {
       "target": [
@@ -37,12 +37,6 @@
       "icon": "../assets/images/icon.png",
       "certificateSubjectName": null,
       "certificateSha1": null
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "deleteAppDataOnUninstall": true
     },
     "nsis": {
       "oneClick": false,

@@ -18,6 +18,7 @@ export interface Budget {
   name: string;
   fluid_balance: number;
   monthly_limit: number;
+  profiles_count?: number;
 }
 
 export interface Transaction {

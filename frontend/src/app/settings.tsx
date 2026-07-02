@@ -33,9 +33,9 @@ export default function SettingsScreen() {
   const [linkError, setLinkError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
 
-  // Check if user has a linked group (not the default unlinked group)
-  // A user is "linked" if their group is shared (not the initial solo group)
-  const isLinked = user?.group_id && user.group_id !== 'group-unlinked-456';
+  // Check if user has a linked (shared) group
+  // A group is "linked" if more than one profile shares it
+  const isLinked = (budget?.profiles_count ?? 1) > 1;
 
   const handleGenerateCode = async () => {
     setLinkError(null);

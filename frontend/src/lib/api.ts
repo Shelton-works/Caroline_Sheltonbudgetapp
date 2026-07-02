@@ -1,12 +1,24 @@
 import { Platform } from 'react-native';
 
-// Base URL for backend.
-// In development, Android emulator accesses localhost via 10.0.2.2.
-// iOS simulator and Web can access via localhost directly.
-const BASE_URL = Platform.select({
+/**
+ * Base URL for the backend API.
+ *
+ * Development defaults:
+ * - Android emulator: http://10.0.2.2:8000
+ * - iOS simulator / Web: http://localhost:8000
+ *
+ * Production: Set EXPO_PUBLIC_API_URL at build time, e.g.:
+ *   EXPO_PUBLIC_API_URL=https://your-app.onrender.com
+ */
+const DEV_API_URL = Platform.select({
   android: 'http://10.0.2.2:8000',
   default: 'http://localhost:8000',
-});
+}) as string;
+
+const BASE_URL = (process.env.EXPO_PUBLIC_API_URL || DEV_API_URL).replace(
+  /\/+$/,
+  ''
+);
 
 class ApiClient {
   private token: string | null = null;
@@ -20,7 +32,7 @@ class ApiClient {
     const headers = new Headers(options.headers || {});
     
     headers.set('Content-Type', 'application/json');
-    headers.set('X-SECRET-TOKEN', 'my-secure-api-key-123');
+    headers.set('X-SECRET-TOKEN', process.env.EXPO_PUBLIC_BACKEND_SECRET || 'my-secure-api-key-123');
     if (this.token) {
       headers.set('Authorization', `Bearer ${this.token}`);
     }
@@ -58,7 +70,7 @@ class ApiClient {
   }
 
   // Budget endpoints
-  async getBudget(): Promise<{ id: string; name: string; fluid_balance: number; monthly_limit: number }> {
+  async getBudget(): Promise<{ id: string; name: string; fluid_balance: number; monthly_limit: number; profiles_count?: number }> {
     return this.request('/api/transactions/budget');
   }
 

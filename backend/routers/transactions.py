@@ -59,13 +59,22 @@ async def get_budget(current_user: dict = Depends(get_current_user)):
                 "monthly_limit": 2000.00,
                 "created_at": datetime.datetime.now().isoformat()
             }
-        return MOCK_BUDGET_GROUPS[group_id]
+        budget = dict(MOCK_BUDGET_GROUPS[group_id])
+        # Count profiles sharing this group
+        budget["profiles_count"] = sum(
+            1 for p in MOCK_PROFILES.values() if p["group_id"] == group_id
+        )
+        return budget
 
     try:
         res = supabase_admin.select("budget_groups", eq_col="id", eq_val=group_id)
         if not res.data:
             raise HTTPException(status_code=404, detail="Budget group not found")
-        return res.data[0]
+        budget = dict(res.data[0])
+        # Count profiles sharing this group (for "isLinked" determination)
+        profiles_res = supabase_admin.select("profiles", eq_col="group_id", eq_val=group_id)
+        budget["profiles_count"] = len(profiles_res.data) if profiles_res.data else 1
+        return budget
     except Exception as e:
         # Fallback to mock
         return MOCK_BUDGET_GROUPS.get(group_id, {
@@ -73,7 +82,8 @@ async def get_budget(current_user: dict = Depends(get_current_user)):
             "name": "Fallback Budget",
             "fluid_balance": 150.00,
             "monthly_limit": 2000.00,
-            "created_at": datetime.datetime.now().isoformat()
+            "created_at": datetime.datetime.now().isoformat(),
+            "profiles_count": 1
         })
 
 @router.post("/budget/update")
@@ -212,14 +222,14 @@ async def create_transaction(tx_in: TransactionCreate, current_user: dict = Depe
             for p in profiles_res.data:
                 if p.get("id") != user_id:
                     token = p.get("expo_push_token")
-                if token:
-                    await send_partner_push_notification(
-                        token,
-                        sender_name,
-                        tx_in.amount,
-                        tx_in.memo,
-                        tx_in.type
-                    )
+                    if token:
+                        await send_partner_push_notification(
+                            token,
+                            sender_name,
+                            tx_in.amount,
+                            tx_in.memo,
+                            tx_in.type
+                        )
 
         return {"transaction": tx_res.data[0], "fluid_balance": new_balance}
     except Exception as e:

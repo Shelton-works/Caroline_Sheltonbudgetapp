@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: our-finances-api
+    runtime: docker
+    repo: https://github.com/Shelton-works/Caroline_Sheltonbudgetapp
+    plan: free
+    region: oregon
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false
+      - key: SUPABASE_ANON_KEY
+        sync: false
+      - key: BACKEND_SECRET_TOKEN
+        sync: false
+      - key: GITHUB_REPO
+        value: "Shelton-works/Caroline_Sheltonbudgetapp"
+      - key: CORS_ORIGINS
+        value: "https://caroline-sheltonbudgetapp.onrender.com,exp://*,http://localhost:*"
+      - key: MOCK_MODE
+        value: "false"

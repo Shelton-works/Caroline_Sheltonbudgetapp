@@ -5,6 +5,7 @@ python-multipart>=0.0.9
 httpx>=0.27.0
 requests>=2.31.0
 packaging>=23.0
+python-dotenv>=1.0.0
 # Optional (Android only): pyjnius  (pip install pyjnius)
 #   Used by updater.py to invoke the Android PackageInstaller intent.
 #   Falls back to 'pm install' shell command if unavailable.
