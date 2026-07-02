@@ -10,7 +10,7 @@ Usage (interactive):
 
 Usage (CI / one-off):
     python backend/hash_release.py --file dist/app-setup.exe --platform windows
-    python backend/hash_release.py --manifest version.json --windows dist/setup.exe --android dist/app.apk
+    python backend/hash_release.py --manifest website/version.json --windows dist/setup.exe --android dist/app.apk
 
 Print-only (no file write):
     python backend/hash_release.py --file dist/app.exe --print
@@ -165,8 +165,8 @@ def _build_parser() -> argparse.ArgumentParser:
     )
     parser.add_argument(
         "--manifest",
-        default="version.json",
-        help="Path to version.json (default: ./version.json)",
+        default="website/version.json",
+        help="Path to version.json (default: ./website/version.json)",
     )
     parser.add_argument(
         "--windows",

@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Our Finances — Download</title>
+  <meta name="description" content="Download Our Finances — a shared budget app for partners. Available for Windows desktop and Android mobile." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:opsz,wght@14..32,400;14..32,500;14..32,600;14..32,700;14..32,800&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f4f5f7;
+      --surface: #ffffff;
+      --surface-hover: #f0f1f3;
+      --text: #1a1d23;
+      --text-secondary: #6b7280;
+      --text-tertiary: #9ca3af;
+      --accent: #4E635A;
+      --accent-hover: #3d5049;
+      --accent-light: #e8ecea;
+      --border: #e5e7eb;
+      --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+      --shadow-lg: 0 8px 32px rgba(0,0,0,0.10);
+      --radius: 16px;
+      --radius-sm: 10px;
+      --transition: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #0f1117;
+        --surface: #1a1d28;
+        --surface-hover: #242736;
+        --text: #edf2f7;
+        --text-secondary: #9ca3af;
+        --text-tertiary: #6b7280;
+        --accent: #8FA88B;
+        --accent-hover: #a6bfa2;
+        --accent-light: #1f2d28;
+        --border: #2d3143;
+        --shadow-sm: 0 1px 3px rgba(0,0,0,0.3);
+        --shadow-md: 0 4px 16px rgba(0,0,0,0.4);
+        --shadow-lg: 0 8px 32px rgba(0,0,0,0.5);
+      }
+    }
+
+    html { font-size: 16px; scroll-behavior: smooth; }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      transition: background var(--transition), color var(--transition);
+    }
+
+    /* ── Hero ── */
+
+    .hero {
+      width: 100%;
+      padding: 60px 24px 40px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 60% 50% at 50% 30%, var(--accent-light) 0%, transparent 70%);
+      opacity: 0.5;
+      pointer-events: none;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 100px;
+      background: var(--accent-light);
+      color: var(--accent);
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      margin-bottom: 20px;
+      position: relative;
+    }
+
+    .hero-badge .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse-dot 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.15;
+      position: relative;
+      margin-bottom: 12px;
+    }
+
+    .hero h1 span { color: var(--accent); }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--text-secondary);
+      max-width: 540px;
+      margin: 0 auto 8px;
+      position: relative;
+    }
+
+    .hero .version-info {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 16px;
+      font-size: 0.9rem;
+      color: var(--text-tertiary);
+      position: relative;
+      flex-wrap: wrap;
+    }
+
+    .hero .version-info .sep {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-tertiary);
+    }
+
+    /* ── Container ── */
+
+    .container {
+      width: 100%;
+      max-width: 720px;
+      padding: 0 24px 60px;
+    }
+
+    /* ── Download Cards ── */
+
+    .cards {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 36px;
+    }
+
+    @media (max-width: 560px) {
+      .cards { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 28px 24px 24px;
+      text-align: center;
+      transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--accent);
+    }
+
+    .card:active {
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .card .icon-wrap {
+      width: 56px;
+      height: 56px;
+      border-radius: 16px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 14px;
+      background: var(--accent-light);
+      transition: background var(--transition);
+    }
+
+    .card:hover .icon-wrap {
+      background: color-mix(in srgb, var(--accent-light) 80%, var(--accent));
+    }
+
+    .card .icon-wrap svg {
+      width: 28px;
+      height: 28px;
+      color: var(--accent);
+      transition: transform var(--transition);
+    }
+
+    .card:hover .icon-wrap svg {
+      transform: scale(1.1);
+    }
+
+    .card h3 {
+      font-size: 1.15rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .card .platform-sub {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+      margin-bottom: 20px;
+    }
+
+    .card .btn-download {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      padding: 12px 24px;
+      border: none;
+      border-radius: var(--radius-sm);
+      background: var(--accent);
+      color: #fff;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background var(--transition), transform var(--transition), box-shadow var(--transition);
+      text-decoration: none;
+    }
+
+    .card .btn-download:hover {
+      background: var(--accent-hover);
+      box-shadow: 0 4px 14px color-mix(in srgb, var(--accent) 40%, transparent);
+    }
+
+    .card .btn-download:active {
+      transform: scale(0.97);
+    }
+
+    .card .btn-download:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .card .btn-download .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      display: none;
+    }
+
+    .card .btn-download.loading .spinner { display: block; }
+    .card .btn-download.loading .btn-text { display: none; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .card .checksum {
+      margin-top: 12px;
+      font-size: 0.7rem;
+      color: var(--text-tertiary);
+      word-break: break-all;
+      font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace;
+      opacity: 0;
+      max-height: 0;
+      transition: opacity 0.3s, max-height 0.3s;
+    }
+
+    .card .checksum.visible {
+      opacity: 0.7;
+      max-height: 60px;
+    }
+
+    .card .checksum-toggle {
+      margin-top: 8px;
+      background: none;
+      border: none;
+      font-size: 0.75rem;
+      color: var(--text-tertiary);
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: underline;
+      text-underline-offset: 2px;
+      transition: color var(--transition);
+    }
+
+    .card .checksum-toggle:hover { color: var(--accent); }
+
+    /* ── Release Notes ── */
+
+    .release-notes {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 20px;
+      transition: box-shadow var(--transition);
+    }
+
+    .release-notes:hover {
+      box-shadow: var(--shadow-md);
+    }
+
+    .release-notes h4 {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--text-tertiary);
+      margin-bottom: 8px;
+    }
+
+    .release-notes p {
+      font-size: 0.95rem;
+      color: var(--text-secondary);
+      line-height: 1.7;
+    }
+
+    /* ── GitHub Link ── */
+
+    .github-link {
+      text-align: center;
+    }
+
+    .github-link a {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-tertiary);
+      text-decoration: none;
+      font-size: 0.85rem;
+      transition: color var(--transition);
+    }
+
+    .github-link a:hover { color: var(--accent); }
+
+    .github-link a svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    /* ── Error / Loading states ── */
+
+    .state-message {
+      text-align: center;
+      padding: 40px 24px;
+      color: var(--text-secondary);
+    }
+
+    .state-message .spinner-lg {
+      width: 32px;
+      height: 32px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.6s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    .state-message.error .spinner-lg { display: none; }
+    .state-message.error { color: #dc2626; }
+
+    .hidden { display: none; }
+  </style>
+</head>
+<body>
+
+  <!-- Hero -->
+  <header class="hero">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      <span>Latest Release</span>
+    </div>
+    <h1>Our <span>Finances</span></h1>
+    <p>Shared budgeting for partners. Track expenses together, stay on the same page.</p>
+    <div class="version-info" id="versionInfo">
+      <span id="versionTag">—</span>
+      <span class="sep"></span>
+      <span id="releaseDate">—</span>
+    </div>
+  </header>
+
+  <!-- Main content -->
+  <main class="container">
+
+    <!-- Loading state -->
+    <div class="state-message" id="loadingState">
+      <div class="spinner-lg"></div>
+      <p>Checking for updates…</p>
+    </div>
+
+    <!-- Error state -->
+    <div class="state-message error hidden" id="errorState">
+      <p id="errorText">Could not load version information.</p>
+    </div>
+
+    <!-- Cards + Release Notes (hidden until loaded) -->
+    <div id="content" class="hidden">
+
+      <div class="cards">
+        <!-- Windows Card -->
+        <div class="card" id="windowsCard">
+          <div class="icon-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M4 5l7-1v6l-7 1V5z"/>
+              <path d="M13 4l7-1v7l-7 1V4z"/>
+              <path d="M4 12l7 1v6l-7-1v-6z"/>
+              <path d="M13 13l7 1v6l-7-1v-6z"/>
+            </svg>
+          </div>
+          <h3>Windows</h3>
+          <p class="platform-sub">Desktop app · .exe installer</p>
+          <a class="btn-download" id="winBtn" href="">
+            <span class="btn-text">Download for Windows</span>
+            <span class="spinner"></span>
+          </a>
+          <button type="button" class="checksum-toggle" data-target="winChecksum">Show SHA-256</button>
+          <div class="checksum" id="winChecksum">—</div>
+        </div>
+
+        <!-- Android Card -->
+        <div class="card" id="androidCard">
+          <div class="icon-wrap">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="5" y="2" width="14" height="20" rx="2" ry="2"/>
+              <line x1="9" y1="19" x2="15" y2="19"/>
+              <line x1="12" y1="16" x2="12" y2="18"/>
+              <line x1="8" y1="6" x2="16" y2="6"/>
+            </svg>
+          </div>
+          <h3>Android</h3>
+          <p class="platform-sub">Mobile app · .apk download</p>
+          <a class="btn-download" id="androidBtn" href="">
+            <span class="btn-text">Download for Android</span>
+            <span class="spinner"></span>
+          </a>
+          <button type="button" class="checksum-toggle" data-target="androidChecksum">Show SHA-256</button>
+          <div class="checksum" id="androidChecksum">—</div>
+        </div>
+      </div>
+
+      <div class="release-notes" id="releaseNotes">
+        <h4>What's New</h4>
+        <p id="releaseNotesText">—</p>
+      </div>
+
+      <div class="github-link">
+        <a href="https://github.com/sheltonbechani/frontend" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
+          <span>View on GitHub</span>
+        </a>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    (async () => {
+      const $ = (id) => document.getElementById(id);
+      const loadingEl = $('loadingState');
+      const errorEl   = $('errorState');
+      const errorText = $('errorText');
+      const content   = $('content');
+
+      try {
+        const res = await fetch('./version.json');
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        // Populate version info
+        $('versionTag').textContent = `v${data.version}`;
+
+        if (data.release_date) {
+          const d = new Date(data.release_date);
+          $('releaseDate').textContent = d.toLocaleDateString('en-US', {
+            year: 'numeric', month: 'long', day: 'numeric'
+          });
+        }
+
+        if (data.release_notes) {
+          $('releaseNotesText').textContent = data.release_notes;
+        }
+
+        // Windows
+        const win = data.platforms?.windows;
+        const winBtn = $('winBtn');
+        if (win?.download_url) {
+          winBtn.href = win.download_url;
+        } else {
+          winBtn.disabled = true;
+          winBtn.querySelector('.btn-text').textContent = 'Not available';
+        }
+        if (win?.checksum_sha256) {
+          $('winChecksum').textContent = `SHA-256: ${win.checksum_sha256}`;
+        }
+
+        // Android
+        const android = data.platforms?.android;
+        const androidBtn = $('androidBtn');
+        if (android?.download_url) {
+          androidBtn.href = android.download_url;
+        } else {
+          androidBtn.disabled = true;
+          androidBtn.querySelector('.btn-text').textContent = 'Not available';
+        }
+        if (android?.checksum_sha256) {
+          $('androidChecksum').textContent = `SHA-256: ${android.checksum_sha256}`;
+        }
+
+        // Show content, hide loading
+        loadingEl.classList.add('hidden');
+        content.classList.remove('hidden');
+
+      } catch (err) {
+        loadingEl.classList.add('hidden');
+        errorEl.classList.remove('hidden');
+        errorText.textContent = err.message || 'Failed to load version information.';
+      }
+
+      // Checksum toggle
+      document.querySelectorAll('.checksum-toggle').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const target = $(btn.dataset.target);
+          if (target) {
+            const isVisible = target.classList.toggle('visible');
+            btn.textContent = isVisible ? 'Hide SHA-256' : 'Show SHA-256';
+          }
+        });
+      });
+
+      // Download button click tracking (just for UX feedback)
+      document.querySelectorAll('.btn-download').forEach(btn => {
+        btn.addEventListener('click', function (e) {
+          if (this.disabled) return;
+          this.classList.add('loading');
+          // The download starts naturally — remove spinner after a moment
+          setTimeout(() => this.classList.remove('loading'), 3000);
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
