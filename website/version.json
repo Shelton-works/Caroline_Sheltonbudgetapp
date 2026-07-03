@@ -4,12 +4,12 @@
   "release_date": "2026-07-03",
   "platforms": {
     "windows": {
-      "download_url": "./downloads/Our Finances Setup 1.0.0.exe",
+      "download_url": "./downloads/Our-Finances-Setup-1.0.0.exe",
       "checksum_sha256": "3a3b3e9c5eada949a63a0e0b1b63d5eb2af6533f3113046582be4d7cda5af59a",
       "minimum_version": "1.0.0"
     },
     "android": {
-      "download_url": "./downloads/CarolinePartnerBudget-v1.0.0.apk",
+      "download_url": "https://drive.google.com/uc?export=download&id=1pldkK7_rD5cQpS5QsLBAr87ihPGxUkvj",
       "checksum_sha256": "98983ae0b4ab2c94517bfafdfe4a03293920bd9fd617c8f3296976f3368fa2f9",
       "minimum_version": "1.0.0"
     }
