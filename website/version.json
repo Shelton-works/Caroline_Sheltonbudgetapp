@@ -1,16 +1,16 @@
 {
   "version": "1.0.0",
   "release_notes": "Initial release — real-time lightweight partner budgeting with expense tracking, analytics, and partner linking.",
-  "release_date": "2026-07-01",
+  "release_date": "2026-07-03",
   "platforms": {
     "windows": {
       "download_url": "../releases/Our Finances Setup 1.0.0.exe",
-      "checksum_sha256": "d28bbc933392af9c5c64048779c6c1bbd972d673f242eb11a239bea44959239a",
+      "checksum_sha256": "3a3b3e9c5eada949a63a0e0b1b63d5eb2af6533f3113046582be4d7cda5af59a",
       "minimum_version": "1.0.0"
     },
     "android": {
       "download_url": "../releases/CarolinePartnerBudget-v1.0.0.apk",
-      "checksum_sha256": "b19348f6db72c5f8ca8f6fcbb389e4b8190408b52230bb9b3fd2a274efa2882f",
+      "checksum_sha256": "98983ae0b4ab2c94517bfafdfe4a03293920bd9fd617c8f3296976f3368fa2f9",
       "minimum_version": "1.0.0"
     }
   }

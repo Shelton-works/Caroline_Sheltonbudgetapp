@@ -1,9 +1,13 @@
 import { create } from 'zustand';
 import { api } from '../lib/api';
+import { supabase } from '../lib/supabase';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import type { AuthChangeEvent, Session } from '@supabase/supabase-js';
 
-const TOKEN_KEY = '@ourfinances_token';
 const USER_KEY = '@ourfinances_user';
+
+// Track the onAuthStateChange subscription so we can clean it up
+let _authListener: { data: { subscription: { unsubscribe: () => void } } } | null = null;
 
 export interface Profile {
   id: string;
@@ -44,8 +48,8 @@ interface BudgetState {
 
   // Actions
   init: () => Promise<void>;
-  login: (email: string) => Promise<void>;
-  signUp: (email: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  signUp: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   fetchData: () => Promise<void>;
   addTransaction: (amount: number, type: 'expense' | 'income', category: string, memo: string) => Promise<void>;
@@ -55,49 +59,32 @@ interface BudgetState {
   setTheme: (theme: 'light' | 'dark') => void;
 }
 
-const toSimpleHash = (str: string): string => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) {
-    const char = str.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash |= 0;
-  }
-  return Math.abs(hash).toString(36);
-};
-
-const mapEmailToMockToken = (email: string): string => {
-  const cleanEmail = email.toLowerCase().trim();
-  if (cleanEmail === 'alex@example.com') return 'mock-jwt-token-partner-a';
-  if (cleanEmail === 'taylor@example.com') return 'mock-jwt-token-partner-b';
-  if (cleanEmail === 'caroline@example.com') return 'mock-jwt-token-unlinked';
-  // Dynamic token for any other email - use simple hash instead of btoa
-  return `mock-token-${toSimpleHash(cleanEmail)}`;
-};
-
-const mapEmailToProfile = (email: string, mockToken: string): Profile => {
-  const cleanEmail = email.toLowerCase().trim();
-  if (cleanEmail === 'alex@example.com') {
-    return {
-      id: 'user-a-1111', email: cleanEmail, display_name: 'Alex',
-      group_id: 'group-shared-123', expo_push_token: 'ExponentPushToken[mock-partner-a]',
-    };
-  }
-  if (cleanEmail === 'taylor@example.com') {
-    return {
-      id: 'user-b-2222', email: cleanEmail, display_name: 'Taylor',
-      group_id: 'group-shared-123', expo_push_token: 'ExponentPushToken[mock-partner-b]',
-    };
-  }
-  // New/dynamic users
-  const name = cleanEmail.split('@')[0];
-  const capitalized = name.charAt(0).toUpperCase() + name.slice(1);
+/** Build a Profile object from a Supabase auth user and optional budget group ID. */
+const buildProfile = (
+  supabaseUser: { id: string; email?: string | null; user_metadata?: { [key: string]: any } },
+  groupId?: string,
+): Profile => {
+  const email = supabaseUser.email || '';
+  const metadataName = supabaseUser.user_metadata?.display_name as string | undefined;
+  const rawName = metadataName || email.split('@')[0] || 'User';
+  // Handle dotted emails like "firstname.lastname" -> "Firstname Lastname"
+  const cleanName = rawName.replace(/\./g, ' ');
+  const capitalized = cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
   return {
-    id: mockToken.replace('mock-token-', 'user-'),
-    email: cleanEmail,
+    id: supabaseUser.id,
+    email,
     display_name: capitalized,
-    group_id: 'group-unlinked-456',
+    group_id: groupId || '',
     expo_push_token: null,
   };
+};
+
+/** Extract a non-null user from a Supabase auth response, throwing if missing. */
+const requireUser = (
+  user: { id: string; email?: string | null; user_metadata?: { [key: string]: any } } | null,
+): { id: string; email?: string | null; user_metadata?: { [key: string]: any } } => {
+  if (!user) throw new Error('Authentication failed: no user data returned.');
+  return user;
 };
 
 export const useBudgetStore = create<BudgetState>((set, get) => ({
@@ -112,35 +99,46 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 
   init: async () => {
     try {
-      const savedToken = await AsyncStorage.getItem(TOKEN_KEY);
-      if (savedToken) {
-        const savedUserStr = await AsyncStorage.getItem(USER_KEY);
-        api.setToken(savedToken);
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        api.setToken(session.access_token);
 
-        // Fetch fresh data with timeout
+        // Clean up any previous listener to prevent memory leaks on re-init
+        if (_authListener) {
+          _authListener.data.subscription.unsubscribe();
+        }
+
+        // Subscribe to token refresh — keep api.token in sync
+        _authListener = supabase.auth.onAuthStateChange(
+          (_event: AuthChangeEvent, newSession: Session | null) => {
+            if (newSession?.access_token) {
+              api.setToken(newSession.access_token);
+            }
+          },
+        );
+
+        // Fetch fresh data
         try {
-          const results = await Promise.race([
-            Promise.all([
-              api.getTransactions(),
-              api.getBudget(),
-            ]),
-            new Promise<never>((_, reject) =>
-              setTimeout(() => reject(new Error('Request timed out')), 8000)
-            ),
+          const [transactions, budget] = await Promise.all([
+            api.getTransactions(),
+            api.getBudget(),
           ]);
-          const [transactions, budget] = results;
-          const savedUser = savedUserStr ? JSON.parse(savedUserStr) : null;
+
+          const profile = buildProfile(session.user, budget.id);
+          await AsyncStorage.setItem(USER_KEY, JSON.stringify(profile));
+
           set({
-            token: savedToken,
-            user: savedUser,
+            token: session.access_token,
+            user: profile,
             transactions,
             budget,
             isLoading: false,
           });
         } catch (err) {
-          // Token expired, invalid, or network error - log out gracefully
-          await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]).catch(() => {});
+          // Session expired or network error — sign out cleanly
+          await supabase.auth.signOut().catch(() => {});
           api.setToken(null);
+          await AsyncStorage.removeItem(USER_KEY).catch(() => {});
           set({ token: null, user: null, isLoading: false });
         }
       } else {
@@ -151,25 +149,31 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     }
   },
 
-  login: async (email: string) => {
+  login: async (email: string, password: string) => {
     set({ isLoading: true, error: null });
     try {
-      const mockToken = mapEmailToMockToken(email);
-      const userObj = mapEmailToProfile(email, mockToken);
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      if (!data.session) throw new Error('No session returned from login');
 
-      api.setToken(mockToken);
+      const session = data.session;
+      const user = requireUser(data.user);
+      api.setToken(session.access_token);
 
-      // Fetch budget data as validation
-      const transactions = await api.getTransactions();
-      const budget = await api.getBudget();
+      // Fetch budget & transactions
+      const [transactions, budget] = await Promise.all([
+        api.getTransactions(),
+        api.getBudget(),
+      ]);
 
-      // Persist token and user
-      await AsyncStorage.setItem(TOKEN_KEY, mockToken);
-      await AsyncStorage.setItem(USER_KEY, JSON.stringify(userObj));
+      const profile = buildProfile(user, budget.id);
+
+      // Persist user profile locally
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(profile));
 
       set({
-        token: mockToken,
-        user: userObj,
+        token: session.access_token,
+        user: profile,
         budget,
         transactions,
         isLoading: false,
@@ -180,13 +184,55 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     }
   },
 
-  signUp: async (email: string) => {
-    return get().login(email);
+  signUp: async (email: string, password: string) => {
+    set({ isLoading: true, error: null });
+    try {
+      const { data, error } = await supabase.auth.signUp({ email, password });
+      if (error) throw error;
+      if (!data.session) {
+        // If email confirmation is required, the session may be null.
+        throw new Error(
+          'Check your email for a confirmation link, then come back and sign in.',
+        );
+      }
+
+      const session = data.session;
+      const user = requireUser(data.user);
+      api.setToken(session.access_token);
+
+      // Fetch budget & transactions (backend auto-creates profile on first request)
+      const [transactions, budget] = await Promise.all([
+        api.getTransactions(),
+        api.getBudget(),
+      ]);
+
+      const profile = buildProfile(user, budget.id);
+
+      // Persist user profile locally
+      await AsyncStorage.setItem(USER_KEY, JSON.stringify(profile));
+
+      set({
+        token: session.access_token,
+        user: profile,
+        budget,
+        transactions,
+        isLoading: false,
+      });
+    } catch (err: any) {
+      set({ error: err.message || 'Sign up failed', isLoading: false });
+      throw err;
+    }
   },
 
   logout: async () => {
+    // Clean up auth listener
+    if (_authListener) {
+      _authListener.data.subscription.unsubscribe();
+      _authListener = null;
+    }
+    await supabase.auth.signOut().catch(() => {});
     api.setToken(null);
-    await AsyncStorage.multiRemove([TOKEN_KEY, USER_KEY]);
+    await AsyncStorage.removeItem(USER_KEY).catch(() => {});
     set({
       token: null,
       user: null,
@@ -204,8 +250,10 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       set({ isLoading: true, error: null });
     }
     try {
-      const transactions = await api.getTransactions();
-      const budget = await api.getBudget();
+      const [transactions, budget] = await Promise.all([
+        api.getTransactions(),
+        api.getBudget(),
+      ]);
       set({ transactions, budget, isLoading: false });
     } catch (err: any) {
       set({ error: err.message || 'Failed to fetch data', isLoading: false });
@@ -248,7 +296,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 
       set((state) => ({
         transactions: state.transactions.map((tx) =>
-          tx.id === optimisticId ? serverTx : tx
+          tx.id === optimisticId ? serverTx : tx,
         ),
         budget: state.budget ? { ...state.budget, fluid_balance: serverBalance } : null,
       }));
@@ -278,8 +326,10 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       const res = await api.linkPartner(code);
 
       // Refresh state after linking
-      const transactions = await api.getTransactions();
-      const budget = await api.getBudget();
+      const [transactions, budget] = await Promise.all([
+        api.getTransactions(),
+        api.getBudget(),
+      ]);
 
       const currentUser = get().user;
       const updatedUser = currentUser ? { ...currentUser, group_id: res.group_id } : null;

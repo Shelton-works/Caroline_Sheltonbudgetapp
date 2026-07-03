@@ -11,6 +11,8 @@ import {
   Platform,
   ScrollView,
   Share,
+  Keyboard,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { Colors } from '../constants/theme';
@@ -21,6 +23,7 @@ export default function OnboardingScreen() {
 
   const {
     login,
+    signUp,
     isLoading,
     partnerCode,
     generatePartnerCode,
@@ -28,34 +31,68 @@ export default function OnboardingScreen() {
     fetchData,
   } = useBudgetStore();
 
-  const [step, setStep] = useState<'welcome' | 'name' | 'connect' | 'code' | 'linked'>('welcome');
-  const [displayName, setDisplayName] = useState('');
+  const [step, setStep] = useState<'welcome' | 'auth' | 'connect' | 'code' | 'linked'>('welcome');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [authError, setAuthError] = useState<string | null>(null);
   const [inputCode, setInputCode] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
-  const [nameError, setNameError] = useState<string | null>(null);
 
-  const handleStart = () => setStep('name');
+  const handleStart = () => {
+    setStep('auth');
+    setAuthMode('signin');
+  };
 
-  const handleNameSubmit = async () => {
-    setNameError(null);
-    const name = displayName.trim();
-    if (!name || name.length < 2) {
-      setNameError('Please enter your name (at least 2 characters).');
-      return;
+  // ── Auth step ──
+
+  const validateAuth = (): boolean => {
+    setAuthError(null);
+    if (!email.trim()) {
+      setAuthError('Please enter your email address.');
+      return false;
     }
+    if (!password) {
+      setAuthError('Please enter a password.');
+      return false;
+    }
+    if (authMode === 'signup' && password.length < 6) {
+      setAuthError('Password must be at least 6 characters.');
+      return false;
+    }
+    if (authMode === 'signup' && password !== confirmPassword) {
+      setAuthError('Passwords do not match.');
+      return false;
+    }
+    return true;
+  };
+
+  const handleSignIn = async () => {
+    if (!validateAuth()) return;
     try {
-      const email = `${name.toLowerCase().replace(/\s+/g, '')}@partner.app`;
-      await login(email);
+      await login(email.trim(), password);
       setStep('connect');
     } catch (err: any) {
-      setNameError(err.message || 'Failed to set up account');
+      setAuthError(err.message || 'Sign in failed. Check your credentials.');
     }
   };
+
+  const handleSignUp = async () => {
+    if (!validateAuth()) return;
+    try {
+      await signUp(email.trim(), password);
+      setStep('connect');
+    } catch (err: any) {
+      setAuthError(err.message || 'Sign up failed.');
+    }
+  };
+
+  // ── Connect step ──
 
   const handleGenerateCode = async () => {
     setLinkError(null);
     await generatePartnerCode();
-    // Read fresh state after the store updates
     const currentCode = useBudgetStore.getState().partnerCode;
     if (currentCode) {
       setStep('code');
@@ -96,7 +133,8 @@ export default function OnboardingScreen() {
     await fetchData();
   };
 
-  // WELCOME SCREEN
+  // ── WELCOME SCREEN ──
+
   if (step === 'welcome') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -119,35 +157,98 @@ export default function OnboardingScreen() {
     );
   }
 
-  // NAME SCREEN
-  if (step === 'name') {
+  // ── AUTH SCREEN (email + password) ──
+
+  if (step === 'auth') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex1}>
-          <ScrollView contentContainerStyle={styles.centerContent}>
-            <View style={styles.formInner}>
-              <Text style={[styles.formTitle, { color: colors.onSurface }]}>What's your name?</Text>
-              <Text style={[styles.formSubtitle, { color: colors.onSurfaceVariant }]}>This is how your partner will see you.</Text>
-              {nameError && <Text style={styles.errorText}>{nameError}</Text>}
-              <TextInput
-                style={[styles.nameInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
-                placeholder="Enter your name"
-                placeholderTextColor={colors.onSurfaceVariant}
-                autoCapitalize="words" autoFocus
-                value={displayName}
-                onChangeText={(t) => { setDisplayName(t); setNameError(null); }}
-              />
-              <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.primary }]} onPress={handleNameSubmit} disabled={isLoading}>
-                <Text style={styles.primaryBtnText}>{isLoading ? 'Setting up...' : 'Continue'}</Text>
-              </TouchableOpacity>
-            </View>
-          </ScrollView>
+          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+            <ScrollView contentContainerStyle={styles.centerContent} keyboardShouldPersistTaps="handled">
+              <View style={styles.formInner}>
+                <Text style={[styles.formTitle, { color: colors.onSurface }]}>
+                  {authMode === 'signin' ? 'Welcome Back' : 'Create Account'}
+                </Text>
+                <Text style={[styles.formSubtitle, { color: colors.onSurfaceVariant }]}>
+                  {authMode === 'signin'
+                    ? 'Sign in to access your shared budget.'
+                    : 'Create an account to start budgeting with your partner.'}
+                </Text>
+
+                {authError && <Text style={styles.errorText}>{authError}</Text>}
+
+                <TextInput
+                  style={[styles.authInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
+                  placeholder="Email"
+                  placeholderTextColor={colors.onSurfaceVariant}
+                  autoCapitalize="none"
+                  autoComplete="email"
+                  keyboardType="email-address"
+                  value={email}
+                  onChangeText={(t) => { setEmail(t); setAuthError(null); }}
+                />
+
+                <TextInput
+                  style={[styles.authInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
+                  placeholder="Password"
+                  placeholderTextColor={colors.onSurfaceVariant}
+                  secureTextEntry
+                  autoCapitalize="none"
+                  autoComplete={authMode === 'signup' ? 'new-password' : 'password'}
+                  value={password}
+                  onChangeText={(t) => { setPassword(t); setAuthError(null); }}
+                />
+
+                {authMode === 'signup' && (
+                  <TextInput
+                    style={[styles.authInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
+                    placeholder="Confirm Password"
+                    placeholderTextColor={colors.onSurfaceVariant}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoComplete="new-password"
+                    value={confirmPassword}
+                    onChangeText={(t) => { setConfirmPassword(t); setAuthError(null); }}
+                  />
+                )}
+
+                <TouchableOpacity
+                  style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+                  onPress={authMode === 'signin' ? handleSignIn : handleSignUp}
+                  disabled={isLoading}
+                >
+                  <Text style={styles.primaryBtnText}>
+                    {isLoading
+                      ? 'Please wait...'
+                      : authMode === 'signin'
+                        ? 'Sign In'
+                        : 'Create Account'}
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.switchBtn, { borderColor: colors.outlineVariant }]}
+                  onPress={() => {
+                    setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
+                    setAuthError(null);
+                  }}
+                >
+                  <Text style={[styles.switchBtnText, { color: colors.onSurfaceVariant }]}>
+                    {authMode === 'signin'
+                      ? "Don't have an account? Sign Up"
+                      : 'Already have an account? Sign In'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </ScrollView>
+          </TouchableWithoutFeedback>
         </KeyboardAvoidingView>
       </SafeAreaView>
     );
   }
 
-  // CONNECT SCREEN
+  // ── CONNECT SCREEN ──
+
   if (step === 'connect') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
@@ -175,13 +276,14 @@ export default function OnboardingScreen() {
     );
   }
 
-  // CODE SCREEN
+  // ── CODE SCREEN ──
+
   if (step === 'code') {
     const isGenerating = !!partnerCode;
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex1}>
-          <ScrollView contentContainerStyle={styles.centerContent}>
+          <ScrollView contentContainerStyle={styles.centerContent} keyboardShouldPersistTaps="handled">
             {isGenerating ? (
               <View style={styles.formInner}>
                 <Text style={[styles.formTitle, { color: colors.onSurface }]}>Your Connection Code</Text>
@@ -222,7 +324,8 @@ export default function OnboardingScreen() {
     );
   }
 
-  // LINKED SUCCESS SCREEN
+  // ── LINKED SUCCESS SCREEN ──
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView contentContainerStyle={styles.centerContent}>
@@ -258,7 +361,7 @@ const styles = StyleSheet.create({
   formTitle: { fontSize: 24, fontWeight: '700', fontFamily: 'Montserrat', textAlign: 'center' },
   formSubtitle: { fontSize: 15, fontWeight: '400', textAlign: 'center', lineHeight: 22, marginBottom: 8 },
   errorText: { color: '#BA1A1A', fontSize: 13, fontWeight: '600', textAlign: 'center' },
-  nameInput: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16, fontSize: 18, textAlign: 'center', fontWeight: '600', marginBottom: 8 },
+  authInput: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16, fontSize: 16, fontWeight: '500' },
   codeInput: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 20, fontSize: 32, textAlign: 'center', fontWeight: '700', letterSpacing: 8, marginBottom: 8 },
   primaryBtn: { width: '100%', paddingVertical: 18, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: '#9F402D', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
@@ -266,6 +369,8 @@ const styles = StyleSheet.create({
   secondaryBtnText: { fontSize: 15, fontWeight: '600' },
   backBtn: { width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   backBtnText: { fontSize: 14, fontWeight: '500' },
+  switchBtn: { width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginTop: -4 },
+  switchBtnText: { fontSize: 14, fontWeight: '500' },
   optionCard: { flexDirection: 'row', alignItems: 'center', gap: 16, padding: 20, borderRadius: 20, shadowColor: '#D1D9E6', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   optionEmoji: { fontSize: 28 },
   optionTextContainer: { flex: 1 },

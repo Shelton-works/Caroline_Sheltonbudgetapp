@@ -21,3 +21,6 @@ C*tmp-test-file.bin
 nul
 frontend/nul
 electron/NUL
+
+# Build releases
+releases/
