@@ -11,6 +11,7 @@ import {
 } from '@expo-google-fonts/montserrat';
 
 import OnboardingScreen from '@/components/OnboardingScreen';
+import UpdateNotification from '@/components/UpdateNotification';
 import { useBudgetStore } from '@/store/useBudgetStore';
 import AppTabs from '@/components/app-tabs';
 
@@ -77,6 +78,7 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+      <UpdateNotification />
       <AppTabs />
     </ThemeProvider>
   );

@@ -3,10 +3,16 @@
   "version": "1.0.0",
   "description": "Our Finances - Shared Sanctuary Desktop App",
   "main": "main.js",
+  "author": "Shelton Bechani",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/sheltonbechani/frontend"
+  },
   "scripts": {
     "start": "electron .",
     "build": "electron-builder build --win",
-    "build:portable": "electron-builder build --win portable"
+    "build:portable": "electron-builder build --win portable",
+    "release": "electron-builder build --win --publish always"
   },
   "build": {
     "appId": "com.ourfinances.desktop",
@@ -34,20 +40,27 @@
           ]
         }
       ],
-      "icon": "../assets/images/icon.png",
-      "certificateSubjectName": null,
-      "certificateSha1": null
+      "icon": "../assets/images/icon.png"
     },
     "nsis": {
-      "oneClick": false,
+      "oneClick": true,
       "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
+      "allowToChangeInstallationDirectory": false,
       "deleteAppDataOnUninstall": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "sheltonbechani",
+      "repo": "frontend",
+      "releaseType": "release"
     }
   },
   "devDependencies": {
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
     "electron-packager": "^17.1.2"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9"
   }
 }
