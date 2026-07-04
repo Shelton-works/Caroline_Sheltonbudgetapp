@@ -1,18 +1,17 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TextInput,
   TouchableOpacity,
+  Pressable,
   useColorScheme,
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
   ScrollView,
   Share,
-  Keyboard,
-  TouchableWithoutFeedback,
 } from 'react-native';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { Colors } from '../constants/theme';
@@ -39,6 +38,11 @@ export default function OnboardingScreen() {
   const [authError, setAuthError] = useState<string | null>(null);
   const [inputCode, setInputCode] = useState('');
   const [linkError, setLinkError] = useState<string | null>(null);
+
+  const emailRef = useRef<TextInput>(null);
+  const passwordRef = useRef<TextInput>(null);
+  const confirmPasswordRef = useRef<TextInput>(null);
+  const codeRef = useRef<TextInput>(null);
 
   const handleStart = () => {
     setStep('auth');
@@ -162,24 +166,36 @@ export default function OnboardingScreen() {
   if (step === 'auth') {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]}>
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.flex1}>
-          <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
-            <ScrollView contentContainerStyle={styles.centerContent} keyboardShouldPersistTaps="handled">
-              <View style={styles.formInner}>
-                <Text style={[styles.formTitle, { color: colors.onSurface }]}>
-                  {authMode === 'signin' ? 'Welcome Back' : 'Create Account'}
-                </Text>
-                <Text style={[styles.formSubtitle, { color: colors.onSurfaceVariant }]}>
-                  {authMode === 'signin'
-                    ? 'Sign in to access your shared budget.'
-                    : 'Create an account to start budgeting with your partner.'}
-                </Text>
+        <KeyboardAvoidingView
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+          style={styles.flex1}
+          enabled={Platform.OS === 'ios'}
+        >
+          <ScrollView
+            contentContainerStyle={styles.centerContent}
+            keyboardShouldPersistTaps="always"
+          >
+            <View style={styles.formInner}>
+              <Text style={[styles.formTitle, { color: colors.onSurface }]}>
+                {authMode === 'signin' ? 'Welcome Back' : 'Create Account'}
+              </Text>
+              <Text style={[styles.formSubtitle, { color: colors.onSurfaceVariant }]}>
+                {authMode === 'signin'
+                  ? 'Sign in to access your shared budget.'
+                  : 'Create an account to start budgeting with your partner.'}
+              </Text>
 
-                {authError && <Text style={styles.errorText}>{authError}</Text>}
+              {authError && <Text style={styles.errorText}>{authError}</Text>}
 
+              <View style={styles.fieldGroup}>
+                <Pressable onPress={() => emailRef.current?.focus()} style={styles.labelRow}>
+                  <Text style={[styles.fieldLabel, { color: colors.onSurfaceVariant }]}>Email</Text>
+                </Pressable>
                 <TextInput
+                  ref={emailRef}
+                  nativeID="email"
                   style={[styles.authInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
-                  placeholder="Email"
+                  placeholder="you@example.com"
                   placeholderTextColor={colors.onSurfaceVariant}
                   autoCapitalize="none"
                   autoComplete="email"
@@ -187,10 +203,17 @@ export default function OnboardingScreen() {
                   value={email}
                   onChangeText={(t) => { setEmail(t); setAuthError(null); }}
                 />
+              </View>
 
+              <View style={styles.fieldGroup}>
+                <Pressable onPress={() => passwordRef.current?.focus()} style={styles.labelRow}>
+                  <Text style={[styles.fieldLabel, { color: colors.onSurfaceVariant }]}>Password</Text>
+                </Pressable>
                 <TextInput
+                  ref={passwordRef}
+                  nativeID="password"
                   style={[styles.authInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
-                  placeholder="Password"
+                  placeholder="Enter your password"
                   placeholderTextColor={colors.onSurfaceVariant}
                   secureTextEntry
                   autoCapitalize="none"
@@ -198,11 +221,18 @@ export default function OnboardingScreen() {
                   value={password}
                   onChangeText={(t) => { setPassword(t); setAuthError(null); }}
                 />
+              </View>
 
-                {authMode === 'signup' && (
+              {authMode === 'signup' && (
+                <View style={styles.fieldGroup}>
+                  <Pressable onPress={() => confirmPasswordRef.current?.focus()} style={styles.labelRow}>
+                    <Text style={[styles.fieldLabel, { color: colors.onSurfaceVariant }]}>Confirm Password</Text>
+                  </Pressable>
                   <TextInput
+                    ref={confirmPasswordRef}
+                    nativeID="confirmPassword"
                     style={[styles.authInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
-                    placeholder="Confirm Password"
+                    placeholder="Re-enter your password"
                     placeholderTextColor={colors.onSurfaceVariant}
                     secureTextEntry
                     autoCapitalize="none"
@@ -210,38 +240,38 @@ export default function OnboardingScreen() {
                     value={confirmPassword}
                     onChangeText={(t) => { setConfirmPassword(t); setAuthError(null); }}
                   />
-                )}
+                </View>
+              )}
 
-                <TouchableOpacity
-                  style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-                  onPress={authMode === 'signin' ? handleSignIn : handleSignUp}
-                  disabled={isLoading}
-                >
-                  <Text style={styles.primaryBtnText}>
-                    {isLoading
-                      ? 'Please wait...'
-                      : authMode === 'signin'
-                        ? 'Sign In'
-                        : 'Create Account'}
-                  </Text>
-                </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
+                onPress={authMode === 'signin' ? handleSignIn : handleSignUp}
+                disabled={isLoading}
+              >
+                <Text style={styles.primaryBtnText}>
+                  {isLoading
+                    ? 'Please wait...'
+                    : authMode === 'signin'
+                      ? 'Sign In'
+                      : 'Create Account'}
+                </Text>
+              </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[styles.switchBtn, { borderColor: colors.outlineVariant }]}
-                  onPress={() => {
-                    setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
-                    setAuthError(null);
-                  }}
-                >
-                  <Text style={[styles.switchBtnText, { color: colors.onSurfaceVariant }]}>
-                    {authMode === 'signin'
-                      ? "Don't have an account? Sign Up"
-                      : 'Already have an account? Sign In'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </ScrollView>
-          </TouchableWithoutFeedback>
+              <TouchableOpacity
+                style={[styles.switchBtn, { borderColor: colors.outlineVariant }]}
+                onPress={() => {
+                  setAuthMode(authMode === 'signin' ? 'signup' : 'signin');
+                  setAuthError(null);
+                }}
+              >
+                <Text style={[styles.switchBtnText, { color: colors.onSurfaceVariant }]}>
+                  {authMode === 'signin'
+                    ? "Don't have an account? Sign Up"
+                    : 'Already have an account? Sign In'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         </KeyboardAvoidingView>
       </SafeAreaView>
     );
@@ -305,6 +335,8 @@ export default function OnboardingScreen() {
                 <Text style={[styles.formSubtitle, { color: colors.onSurfaceVariant }]}>Enter the 6-digit code from your partner to connect your budgets.</Text>
                 {linkError && <Text style={styles.errorText}>{linkError}</Text>}
                 <TextInput
+                  ref={codeRef}
+                  nativeID="partnerCode"
                   style={[styles.codeInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                   placeholder="000000" placeholderTextColor={colors.onSurfaceVariant}
                   keyboardType="number-pad" maxLength={6}
@@ -362,6 +394,9 @@ const styles = StyleSheet.create({
   formSubtitle: { fontSize: 15, fontWeight: '400', textAlign: 'center', lineHeight: 22, marginBottom: 8 },
   errorText: { color: '#BA1A1A', fontSize: 13, fontWeight: '600', textAlign: 'center' },
   authInput: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 16, fontSize: 16, fontWeight: '500' },
+  fieldGroup: { gap: 6 },
+  fieldLabel: { fontSize: 13, fontWeight: '600', letterSpacing: 0.03, marginLeft: 4 },
+  labelRow: { alignSelf: 'flex-start', paddingVertical: 2, paddingHorizontal: 4, cursor: 'pointer' },
   codeInput: { borderWidth: 1, borderRadius: 16, paddingHorizontal: 20, paddingVertical: 20, fontSize: 32, textAlign: 'center', fontWeight: '700', letterSpacing: 8, marginBottom: 8 },
   primaryBtn: { width: '100%', paddingVertical: 18, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: '#9F402D', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
   primaryBtnText: { color: '#FFFFFF', fontSize: 16, fontWeight: '700' },
