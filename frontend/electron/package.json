@@ -1,12 +1,12 @@
 {
   "name": "our-finances-desktop",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Our Finances - Shared Sanctuary Desktop App",
   "main": "main.js",
   "author": "Shelton Bechani",
   "repository": {
     "type": "git",
-    "url": "https://github.com/sheltonbechani/frontend"
+    "url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp"
   },
   "scripts": {
     "start": "electron .",
@@ -50,8 +50,8 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "sheltonbechani",
-      "repo": "frontend",
+      "owner": "Shelton-works",
+      "repo": "Caroline_Sheltonbudgetapp",
       "releaseType": "release"
     }
   },

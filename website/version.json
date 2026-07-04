@@ -1,12 +1,13 @@
 {
-  "version": "1.0.0",
-  "release_notes": "Fixed blank window on launch after installing the Windows desktop app. Assets now load correctly via the custom protocol handler.",
-  "release_date": "2026-07-03",
+  "version": "1.1.0",
+  "release_notes": "Upgrade to version 1.1.0. Added auto-update support and fixed blank window on Windows. The app will now check for updates on launch.",
+  "release_date": "2026-07-04",
   "platforms": {
     "windows": {
-      "download_url": "./downloads/Our-Finances-Setup-1.0.0.exe",
-      "checksum_sha256": "e95a8030a6ef2b54fa0d137789e2f730c8b93c707067eb2b46e16bc11e07a68b",
-      "minimum_version": "1.0.0"
+      "download_url": "./downloads/Our-Finances-Setup-1.1.0.exe",
+      "checksum_sha256": "c4485429b3cf3dcc0949f330a4cefbb216731ccb3c2adaed622c573aa1988899",
+      "minimum_version": "1.0.0",
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.1.0"
     },
     "android": {
       "download_url": "https://drive.google.com/uc?export=download&id=1pldkK7_rD5cQpS5QsLBAr87ihPGxUkvj",
