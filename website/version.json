@@ -1,18 +1,19 @@
 {
-  "version": "1.1.0",
-  "release_notes": "Upgrade to version 1.1.0. Added auto-update support and fixed blank window on Windows. The app will now check for updates on launch.",
-  "release_date": "2026-07-04",
+  "version": "1.2.0",
+  "release_notes": "v1.2.0 — Responsive desktop layout, new Unity Goal, partner connect button, and Android APX working again. The app now fills your screen on desktop, shows 'Buy Shelton's Phone' as the savings goal, and has a 'Connect with Partner' button right on the welcome screen. Android crash on startup is fixed.",
+  "release_date": "2026-07-05",
   "platforms": {
     "windows": {
-      "download_url": "./downloads/Our-Finances-Setup-1.1.0.exe",
-      "checksum_sha256": "15fe4590dd394625734379a76c8367e6784e118439d0a9d6c211f763c3259e12",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.2.0/Our.Finances.Setup.1.2.0.exe",
+      "checksum_sha256": "37646cd46464edcebc0e8ad84d4e1d056af94216cc1a4ae6fbb9ac5717088776",
       "minimum_version": "1.0.0",
-      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.1.0"
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.2.0"
     },
     "android": {
-      "download_url": "https://drive.google.com/uc?export=download&id=1pldkK7_rD5cQpS5QsLBAr87ihPGxUkvj",
-      "checksum_sha256": "98983ae0b4ab2c94517bfafdfe4a03293920bd9fd617c8f3296976f3368fa2f9",
-      "minimum_version": "1.0.0"
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.2.0/Our-Finances-v1.2.0.apk",
+      "checksum_sha256": "2926bcab7c664d72b7be3730dc516ff186944c91e5ccff8cb610c5f544f18f17",
+      "minimum_version": "1.0.0",
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.2.0"
     }
   }
 }
