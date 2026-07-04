@@ -1,11 +1,20 @@
-const { app, BrowserWindow, Menu, shell, protocol, net, ipcMain } = require('electron');
+const { app, BrowserWindow, Menu, shell, protocol, ipcMain } = require('electron');
 const path = require('path');
-const { pathToFileURL } = require('url');
+const fs = require('fs');
 const { autoUpdater } = require('electron-updater');
 
 const DIST_PATH = path.join(__dirname, '..', 'dist');
 
 let mainWindow;
+
+// Register custom protocol as privileged BEFORE app.whenReady()
+// This is required by Electron for protocol.handle() to work correctly
+protocol.registerSchemesAsPrivileged([
+  {
+    scheme: 'ourfinances',
+    privileges: { standard: true, secure: true, supportFetchAPI: true }
+  }
+]);
 
 /**
  * Auto-updater configuration — checks GitHub Releases for new versions.
@@ -70,6 +79,27 @@ function setupAutoUpdater() {
   });
 }
 
+const MIME_TYPES = {
+  '.html': 'text/html',
+  '.js': 'application/javascript',
+  '.css': 'text/css',
+  '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.gif': 'image/gif',
+  '.svg': 'image/svg+xml',
+  '.ico': 'image/x-icon',
+  '.json': 'application/json',
+  '.woff': 'font/woff',
+  '.woff2': 'font/woff2',
+  '.ttf': 'font/ttf',
+  '.map': 'application/json',
+};
+
+function getMimeType(filePath) {
+  return MIME_TYPES[path.extname(filePath).toLowerCase()] || 'application/octet-stream';
+}
+
 /**
  * Custom protocol handler for 'ourfinances://app/...'
  *
@@ -91,9 +121,17 @@ function registerProtocol() {
     const fullPath = path.resolve(DIST_PATH, filePath.startsWith('/') ? filePath.slice(1) : filePath);
     // Prevent path traversal outside dist directory
     if (!fullPath.startsWith(DIST_PATH + path.sep)) {
-      throw new Error('Invalid path');
+      return new Response('Invalid path', { status: 403 });
     }
-    return net.fetch(pathToFileURL(fullPath).toString());
+    try {
+      const data = fs.readFileSync(fullPath);
+      return new Response(data, {
+        headers: { 'Content-Type': getMimeType(fullPath) }
+      });
+    } catch (err) {
+      console.error('[protocol] Failed to serve:', fullPath, err.message);
+      return new Response('Not found', { status: 404 });
+    }
   });
 }
 
