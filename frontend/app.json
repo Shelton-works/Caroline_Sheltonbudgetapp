@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Our Finances",
-    "slug": "our-finances",
+    "slug": "frontend",
     "version": "1.2.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
