@@ -74,9 +74,9 @@ export default function HomeScreen() {
 
   const fluidBalance = budget?.fluid_balance ?? 0;
   const monthlyLimit = budget?.monthly_limit ?? 2000;
-  const unityGoalProgress = 0.75; // 75% - from design
-  const unityGoalSaved = 2250;
-  const unityGoalTarget = 3000;
+  const unityGoalProgress = 0; // 0% — new goal
+  const unityGoalSaved = 0;
+  const unityGoalTarget = 1000;
 
   // Group transactions for recent list
   const recentTransactions = transactions.slice(0, 6);
@@ -136,7 +136,7 @@ export default function HomeScreen() {
           <View style={styles.sectionHeader}>
             <View>
               <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Unity Goal</Text>
-              <Text style={[styles.sectionSubtitle, { color: colors.onSurfaceVariant }]}>Summer Vacation ✈️</Text>
+              <Text style={[styles.sectionSubtitle, { color: colors.onSurfaceVariant }]}>Buy Shelton's New Phone 📱</Text>
             </View>
             <Text style={[styles.goalPercent, { color: colors.primary }]}>75%</Text>
           </View>

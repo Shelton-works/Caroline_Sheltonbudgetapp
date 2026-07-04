@@ -18,6 +18,6 @@ services:
       - key: GITHUB_REPO
         value: "Shelton-works/Caroline_Sheltonbudgetapp"
       - key: CORS_ORIGINS
-        value: "https://caroline-sheltonbudgetapp.onrender.com,exp://*,http://localhost:*"
+        value: "https://caroline-sheltonbudgetapp.onrender.com,exp://*,http://localhost:*,http://127.0.0.1:*"
       - key: MOCK_MODE
         value: "false"

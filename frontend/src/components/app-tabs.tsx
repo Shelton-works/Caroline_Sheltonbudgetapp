@@ -5,8 +5,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Colors, BorderRadius, Spacing } from '@/constants/theme';
 
 const tabs = [
-  { name: 'index', label: 'Overview', icon: 'wallet' },
-  { name: 'analytics', label: 'Ledger', icon: 'chart' },
+  { name: 'index', label: 'Home', icon: 'wallet' },
+  { name: 'analytics', label: 'Logs', icon: 'chart' },
   { name: 'settings', label: 'Settings', icon: 'settings' },
 ];
 

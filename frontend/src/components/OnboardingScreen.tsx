@@ -49,6 +49,8 @@ export default function OnboardingScreen() {
     setAuthMode('signin');
   };
 
+  // handleConnectNow removed — reuses handleStart
+
   // ── Auth step ──
 
   const validateAuth = (): boolean => {
@@ -154,6 +156,17 @@ export default function OnboardingScreen() {
             <Text style={[styles.welcomeDescription, { color: colors.onSurfaceVariant }]}>Track expenses together, save for shared goals, and stay in harmony with your partner.</Text>
             <TouchableOpacity style={[styles.primaryBtn, { backgroundColor: colors.primary }]} onPress={handleStart}>
               <Text style={styles.primaryBtnText}>Get Started</Text>
+            </TouchableOpacity>
+
+            <View style={styles.divider}>
+              <View style={[styles.dividerLine, { backgroundColor: colors.outlineVariant }]} />
+              <Text style={[styles.dividerText, { color: colors.onSurfaceVariant }]}>or</Text>
+              <View style={[styles.dividerLine, { backgroundColor: colors.outlineVariant }]} />
+            </View>
+
+            <TouchableOpacity style={[styles.codeEntryBtn, { borderColor: colors.primary }]} onPress={handleStart}>
+              <Text style={[styles.codeEntryEmoji]}>🔗</Text>
+              <Text style={[styles.codeEntryText, { color: colors.primary }]}>Connect with Partner</Text>
             </TouchableOpacity>
           </View>
         </ScrollView>
@@ -414,4 +427,10 @@ const styles = StyleSheet.create({
   codeDisplay: { padding: 24, borderRadius: 16, borderWidth: 1, alignItems: 'center', marginVertical: 16 },
   codeText: { fontSize: 40, fontWeight: '700', letterSpacing: 6 },
   waitingText: { fontSize: 14, textAlign: 'center', fontStyle: 'italic', marginTop: 8 },
+  divider: { flexDirection: 'row', alignItems: 'center', gap: 12, width: '100%', marginVertical: 8 },
+  dividerLine: { flex: 1, height: 1 },
+  dividerText: { fontSize: 13, fontWeight: '500' },
+  codeEntryBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', paddingVertical: 16, borderRadius: 16, borderWidth: 1.5 },
+  codeEntryEmoji: { fontSize: 20 },
+  codeEntryText: { fontSize: 15, fontWeight: '700' },
 });

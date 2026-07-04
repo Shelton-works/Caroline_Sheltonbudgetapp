@@ -86,11 +86,11 @@ function startServer() {
       });
     });
 
-    // Listen on a random available port
-    server.listen(0, '127.0.0.1', () => {
-      const port = server.address().port;
-      console.log(`[server] Serving dist/ on http://127.0.0.1:${port}`);
-      resolve(port);
+    // Use a fixed port so Supabase auth session persists in localStorage across restarts
+    const PORT = 55630;
+    server.listen(PORT, '127.0.0.1', () => {
+      console.log(`[server] Serving dist/ on http://localhost:${PORT}`);
+      resolve(PORT);
     });
 
     server.on('error', reject);
@@ -157,11 +157,10 @@ function setupAutoUpdater() {
 
 async function createWindow(port) {
   mainWindow = new BrowserWindow({
-    width: 420,
-    height: 900,
-    minWidth: 380,
-    minHeight: 600,
-    maxWidth: 500,
+    width: 1100,
+    height: 800,
+    minWidth: 600,
+    minHeight: 500,
     title: 'Our Finances - Shared Sanctuary',
     icon: path.join(__dirname, '..', 'assets', 'images', 'icon.png'),
     webPreferences: {
@@ -174,7 +173,7 @@ async function createWindow(port) {
   });
 
   // Load from the local HTTP server — Expo Router works perfectly over HTTP
-  mainWindow.loadURL(`http://127.0.0.1:${port}`);
+  mainWindow.loadURL(`http://localhost:${port}`);
 
   mainWindow.once('ready-to-show', () => {
     mainWindow.show();

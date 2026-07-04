@@ -22,8 +22,14 @@
     },
     "files": [
       "main.js",
-      "preload.js",
-      "../dist/**/*"
+      "preload.js"
+    ],
+    "extraResources": [
+      {
+        "from": "../dist",
+        "to": "dist",
+        "filter": ["**/*"]
+      }
     ],
     "win": {
       "target": [

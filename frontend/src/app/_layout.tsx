@@ -52,7 +52,7 @@ export default function RootLayout() {
   // Wait for fonts and store init
   const ready = initialized && (fontsLoaded || fontsError);
 
-  if (!ready || isLoading) {
+  if (!ready) {
     return (
       <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F9F9F9' }}>
@@ -79,7 +79,9 @@ export default function RootLayout() {
   return (
     <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
       <UpdateNotification />
-      <AppTabs />
+      <View style={{ flex: 1, maxWidth: 1200, width: '100%', alignSelf: 'center' }}>
+        <AppTabs />
+      </View>
     </ThemeProvider>
   );
 }
