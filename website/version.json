@@ -1,6 +1,6 @@
 {
   "version": "1.2.0",
-  "release_notes": "v1.2.0 — Responsive desktop layout, new Unity Goal, partner connect button, and Android APX working again. The app now fills your screen on desktop, shows 'Buy Shelton's Phone' as the savings goal, and has a 'Connect with Partner' button right on the welcome screen. Android crash on startup is fixed.",
+  "release_notes": "v1.2.0 — Responsive desktop layout, new Unity Goal, partner connect button, and Android APK working again. The app now fills your screen on desktop, shows 'Buy Shelton's Phone' as the savings goal, and has a 'Connect with Partner' button right on the welcome screen. Android crash on startup is fixed.",
   "release_date": "2026-07-05",
   "platforms": {
     "windows": {
