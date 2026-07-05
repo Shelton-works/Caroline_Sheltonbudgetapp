@@ -81,7 +81,6 @@ export default function SettingsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {/* TopApp Bar */}
       <View style={[styles.topBar, { backgroundColor: colors.background }]}>
         <Text style={[styles.title, { color: colors.onSurface }]}>Settings</Text>
       </View>

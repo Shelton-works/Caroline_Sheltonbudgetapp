@@ -1,0 +1,12 @@
+node_modules/
+electron/
+android/
+ios/
+.expo/
+dist/
+web-build/
+releases/
+downloads/
+*.tsbuildinfo
+*.log
+.DS_Store

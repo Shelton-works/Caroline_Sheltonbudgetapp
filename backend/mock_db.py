@@ -55,6 +55,54 @@ MOCK_PARTNER_CODES = {
     }
 }
 
+# Mock Savings Contributions — tracks per-profile contributions per goal
+# Structure: {goal_id: {profile_id: total_contributed}}
+MOCK_SAVINGS_CONTRIBUTIONS = {
+    "savings-shared-001": {
+        "user-a-1111": 800.00,  # Alex contributed $800 to Summer Vacation
+        "user-b-2222": 400.00,  # Taylor contributed $400
+    },
+    "savings-shared-002": {
+        "user-a-1111": 500.00,  # Alex contributed $500 to Emergency Fund
+        "user-b-2222": 300.00,  # Taylor contributed $300
+    },
+}
+
+# Mock Savings Goals — multiple per budget group
+MOCK_SAVINGS_GOALS = {
+    "group-shared-123": [
+        {
+            "id": "savings-shared-001",
+            "group_id": "group-shared-123",
+            "name": "Summer Vacation",
+            "target_amount": 3000.00,
+            "saved_amount": 1200.00,
+            "auto_save_percentage": 10.00,
+            "sort_order": 0,
+        },
+        {
+            "id": "savings-shared-002",
+            "group_id": "group-shared-123",
+            "name": "Emergency Fund",
+            "target_amount": 5000.00,
+            "saved_amount": 800.00,
+            "auto_save_percentage": 5.00,
+            "sort_order": 1,
+        },
+    ],
+    "group-unlinked-456": [
+        {
+            "id": "savings-unlinked-001",
+            "group_id": "group-unlinked-456",
+            "name": "Buy Shelton's New Phone 📱",
+            "target_amount": 1000.00,
+            "saved_amount": 0.00,
+            "auto_save_percentage": 0.00,
+            "sort_order": 0,
+        },
+    ],
+}
+
 # Mock Transactions
 MOCK_TRANSACTIONS = [
     {

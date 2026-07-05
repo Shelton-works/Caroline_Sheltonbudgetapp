@@ -1,19 +1,19 @@
 {
-  "version": "1.2.0",
-  "release_notes": "v1.2.0 — Responsive desktop layout, new Unity Goal, partner connect button, and Android APK working again. The app now fills your screen on desktop, shows 'Buy Shelton's Phone' as the savings goal, and has a 'Connect with Partner' button right on the welcome screen. Android crash on startup is fixed.",
+  "version": "1.2.1",
+  "release_notes": "v1.2.1 — Per-partner savings contributions. Each partner's deposits are now tracked individually with a visual mini bar chart in the goal card and a detailed breakdown in the expanded view. See exactly who contributed what to every savings goal at a glance.",
   "release_date": "2026-07-05",
   "platforms": {
     "windows": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.2.0/Our.Finances.Setup.1.2.0.exe",
-      "checksum_sha256": "37646cd46464edcebc0e8ad84d4e1d056af94216cc1a4ae6fbb9ac5717088776",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.2.1/Our+Finances+Setup+1.2.1.exe",
+      "checksum_sha256": "8b7d39149c86a8fbd2e7e82433c4f45284ccebcae3d37f53ebc62145f3910d8c",
       "minimum_version": "1.0.0",
-      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.2.0"
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.2.1"
     },
     "android": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.2.0/Our-Finances-v1.2.0.apk",
-      "checksum_sha256": "2926bcab7c664d72b7be3730dc516ff186944c91e5ccff8cb610c5f544f18f17",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.2.1/Our+Finances+1.2.1.apk",
+      "checksum_sha256": "9d651935abd19d60ae7aff9404beddedf600d30f7a1c5dca70251cdf9de7d8a5",
       "minimum_version": "1.0.0",
-      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.2.0"
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.2.1"
     }
   }
 }

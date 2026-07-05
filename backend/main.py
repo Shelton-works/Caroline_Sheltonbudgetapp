@@ -3,13 +3,13 @@ import os
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from routers import partner, transactions
+from routers import partner, transactions, savings
 from updater import check_for_updates
 
 app = FastAPI(
     title="Caroline Partner Budget API",
     description="Real-time lightweight partner budgeting backend",
-    version="1.0.0",
+    version="1.2.1",
 )
 
 # --- CORS ---
@@ -50,6 +50,7 @@ async def verify_api_key(x_secret_token: Optional[str] = Header(None, alias="X-S
 # Include API routers with API Key authentication
 app.include_router(partner.router, dependencies=[Depends(verify_api_key)])
 app.include_router(transactions.router, dependencies=[Depends(verify_api_key)])
+app.include_router(savings.router, dependencies=[Depends(verify_api_key)])
 
 
 @app.get("/")

@@ -24,3 +24,11 @@ electron/NUL
 
 # Build releases
 releases/
+
+# Website downloads (served directly, not tracked in git)
+website/downloads/
+
+# Frontend download cache
+frontend/downloads/
+frontend/Our-Finances-*.apk
+frontend/Our-Finances-*.exe

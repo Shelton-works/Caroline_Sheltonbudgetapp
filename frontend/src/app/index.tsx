@@ -73,10 +73,6 @@ export default function HomeScreen() {
   }, [fetchData]);
 
   const fluidBalance = budget?.fluid_balance ?? 0;
-  const monthlyLimit = budget?.monthly_limit ?? 2000;
-  const unityGoalProgress = 0; // 0% — new goal
-  const unityGoalSaved = 0;
-  const unityGoalTarget = 1000;
 
   // Group transactions for recent list
   const recentTransactions = transactions.slice(0, 6);
@@ -114,7 +110,7 @@ export default function HomeScreen() {
           </View>
         )}
 
-        {/* Shared Balance Card - Neomorphic Extruded */}
+        {/* Shared Balance Card */}
         <View style={[styles.balanceCard, { backgroundColor: colors.card }]}>
           <Text style={[styles.balanceLabel, { color: colors.onSurfaceVariant }]}>Our Shared Balance</Text>
           <BalanceCountUp target={fluidBalance} />
@@ -131,31 +127,8 @@ export default function HomeScreen() {
           </View>
         </View>
 
-        {/* Unity Goal Section */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View>
-              <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Unity Goal</Text>
-              <Text style={[styles.sectionSubtitle, { color: colors.onSurfaceVariant }]}>Buy Shelton's New Phone 📱</Text>
-            </View>
-            <Text style={[styles.goalPercent, { color: colors.primary }]}>75%</Text>
-          </View>
 
-          <View style={[styles.progressTrack, { backgroundColor: colors.surfaceContainerHighest }]}>
-            <View style={[styles.progressFill, { width: '75%', backgroundColor: colors.primary }]} />
-          </View>
-
-          <View style={styles.goalMeta}>
-            <Text style={[styles.goalMetaText, { color: colors.onSurfaceVariant }]}>
-              ${unityGoalSaved.toLocaleString()} saved
-            </Text>
-            <Text style={[styles.goalMetaText, { color: colors.onSurfaceVariant }]}>
-              Goal: ${unityGoalTarget.toLocaleString()}
-            </Text>
-          </View>
-        </View>
-
-        {/* Recent Transactions Section */}
+        {/* Recent Transactions */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Recent Transactions</Text>
@@ -217,21 +190,6 @@ export default function HomeScreen() {
               })}
             </View>
           )}
-        </View>
-
-        {/* Harmony Insight - Neomorphic Pressed */}
-        <View style={[styles.insightCard, { backgroundColor: colors.surfaceContainerLow }]}>
-          <View style={styles.insightHeader}>
-            <Text style={styles.insightEmoji}>💡</Text>
-            <Text style={[styles.insightTitle, { color: colors.onSurface }]}>Harmony Insight</Text>
-          </View>
-          <Text style={[styles.insightBody, { color: colors.onSurfaceVariant }]}>
-            You're both spending{' '}
-            <Text style={{ color: colors.primary, fontWeight: '700' }}>12% less</Text> on groceries
-            this month compared to last. That's an extra{' '}
-            <Text style={{ color: colors.primary }}>$120</Text> for your{' '}
-            <Text style={{ fontStyle: 'italic' }}>Summer Vacation</Text> goal!
-          </Text>
         </View>
 
         <View style={{ height: 100 }} />
@@ -417,52 +375,9 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     fontFamily: 'Montserrat',
   },
-  sectionSubtitle: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
   viewAllText: {
     fontSize: 14,
     fontWeight: '600',
-  },
-
-  // Unity Goal
-  goalPercent: {
-    fontSize: 14,
-    fontWeight: '600',
-    marginBottom: 0,
-  },
-  progressTrack: {
-    height: 24,
-    borderRadius: 12,
-    padding: 4,
-    overflow: 'hidden',
-    marginBottom: 8,
-    // Pressed effect
-    shadowColor: '#D1D9E6',
-    shadowOffset: { width: -2, height: -2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  progressFill: {
-    height: '100%',
-    borderRadius: 10,
-    // Extruded effect on fill
-    shadowColor: '#9F402D',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  goalMeta: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  goalMetaText: {
-    fontSize: 12,
-    fontWeight: '500',
   },
 
   // Transactions
@@ -512,40 +427,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     paddingVertical: 20,
-  },
-
-  // Harmony Insight
-  insightCard: {
-    borderRadius: 24,
-    padding: 24,
-    marginBottom: 24,
-    borderWidth: 1,
-    borderColor: '#E6E6E6',
-    // Pressed effect
-    shadowColor: '#D1D9E6',
-    shadowOffset: { width: -4, height: -4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 2,
-  },
-  insightHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  insightEmoji: {
-    fontSize: 18,
-  },
-  insightTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    fontFamily: 'Montserrat',
-  },
-  insightBody: {
-    fontSize: 16,
-    lineHeight: 24,
-    fontWeight: '400',
   },
 
   // FAB

@@ -7,6 +7,7 @@ import { Colors, BorderRadius, Spacing } from '@/constants/theme';
 const tabs = [
   { name: 'index', label: 'Home', icon: 'wallet' },
   { name: 'analytics', label: 'Logs', icon: 'chart' },
+  { name: 'savings', label: 'Savings', icon: 'goal' },
   { name: 'settings', label: 'Settings', icon: 'settings' },
 ];
 
@@ -28,6 +29,7 @@ export default function AppTabs() {
       >
         <Tabs.Screen name="index" />
         <Tabs.Screen name="analytics" />
+        <Tabs.Screen name="savings" />
         <Tabs.Screen name="settings" />
       </Tabs>
 
@@ -48,7 +50,7 @@ export default function AppTabs() {
               >
                 <View style={[styles.navIcon, isActive && { backgroundColor: colors.primaryLight }]}>
                   <Text style={[styles.navIconText, { color: isActive ? colors.onPrimary : colors.secondary }]}>
-                    {tab.label === 'Overview' ? '💰' : tab.label === 'Ledger' ? '📊' : '⚙️'}
+                    {tab.label === 'Home' ? '💰' : tab.label === 'Logs' ? '📊' : tab.label === 'Savings' ? '🎯' : '⚙️'}
                   </Text>
                 </View>
                 <Text

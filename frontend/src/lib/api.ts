@@ -107,6 +107,64 @@ class ApiClient {
     });
   }
 
+  async getSavingsGoals(): Promise<Array<{
+    id: string;
+    group_id: string;
+    name: string;
+    target_amount: number;
+    saved_amount: number;
+    auto_save_percentage: number;
+    sort_order: number;
+    contributions: Record<string, number>;
+  }>> {
+    return this.request('/api/savings/goals');
+  }
+
+  async createSavingsGoal(data: { name: string; target_amount?: number; auto_save_percentage?: number }): Promise<any> {
+    return this.request('/api/savings/goals', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async updateSavingsGoal(goalId: string, data: { name?: string; target_amount?: number; auto_save_percentage?: number }): Promise<any> {
+    return this.request(`/api/savings/goals/${goalId}`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async savingsDeposit(goalId: string, amount: number): Promise<any> {
+    return this.request(`/api/savings/goals/${goalId}/deposit`, {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    });
+  }
+
+  async savingsWithdraw(goalId: string, amount: number): Promise<any> {
+    return this.request(`/api/savings/goals/${goalId}/withdraw`, {
+      method: 'POST',
+      body: JSON.stringify({ amount }),
+    });
+  }
+
+  async getGoalContributions(goalId: string): Promise<Array<{ profile_id: string; display_name: string; amount: number }>> {
+    return this.request(`/api/savings/goals/${goalId}/contributions`);
+  }
+
+  async reorderSavingsGoals(goalIds: string[]): Promise<any> {
+    return this.request('/api/savings/goals/reorder', {
+      method: 'POST',
+      body: JSON.stringify({ goal_ids: goalIds }),
+    });
+  }
+
+  async deleteSavingsGoal(goalId: string): Promise<any> {
+    return this.request(`/api/savings/goals/${goalId}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Partner endpoints
   async generatePartnerCode(): Promise<{ code: string }> {
     return this.request('/api/partner/code', {

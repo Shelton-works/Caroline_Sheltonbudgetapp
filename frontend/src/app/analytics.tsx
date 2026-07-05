@@ -53,7 +53,6 @@ export default function AnalyticsScreen() {
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {/* TopApp Bar */}
       <View style={[styles.topBar, { backgroundColor: colors.background }]}>
         <Text style={[styles.title, { color: colors.onSurface }]}>Ledger</Text>
       </View>
