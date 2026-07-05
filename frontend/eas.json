@@ -19,6 +19,10 @@
     "production": {
       "android": {
         "buildType": "apk"
+      },
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://caroline-sheltonbudgetapp.onrender.com",
+        "EXPO_PUBLIC_BACKEND_SECRET": "T1r9ijaBye66Br9d15DxdKcQSKPMorEIT9T1lui_GCo"
       }
     }
   },

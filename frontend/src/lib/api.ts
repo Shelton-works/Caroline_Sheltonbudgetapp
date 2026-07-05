@@ -43,7 +43,7 @@ class ApiClient {
     };
 
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 10000);
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
 
     try {
       const response = await fetch(url, { ...config, signal: controller.signal });
@@ -64,6 +64,13 @@ class ApiClient {
       return await response.json() as T;
     } catch (error: any) {
       clearTimeout(timeoutId);
+      // Give a helpful message when the request times out (common on free-tier Render cold start)
+      if (error?.name === 'AbortError' || error?.message?.includes?.('aborted')) {
+        throw new Error(
+          'The server is waking up (this can take 30-60s on the first request). ' +
+          'Please try signing in again in a moment.'
+        );
+      }
       console.error(`API Request Error (${endpoint}):`, error);
       throw error;
     }
