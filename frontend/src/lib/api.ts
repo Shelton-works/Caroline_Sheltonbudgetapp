@@ -32,7 +32,7 @@ class ApiClient {
     const headers = new Headers(options.headers || {});
     
     headers.set('Content-Type', 'application/json');
-    headers.set('X-SECRET-TOKEN', process.env.EXPO_PUBLIC_BACKEND_SECRET || 'T1r9ijaBye66Br9d15DxdKcQSKPMorEIT9T1lui_GCo');
+    headers.set('X-SECRET-TOKEN', 'T1r9ijaBye66Br9d15DxdKcQSKPMorEIT9T1lui_GCo');
     if (this.token) {
       headers.set('Authorization', `Bearer ${this.token}`);
     }
