@@ -9,7 +9,7 @@ from updater import check_for_updates
 app = FastAPI(
     title="Caroline Partner Budget API",
     description="Real-time lightweight partner budgeting backend",
-    version="1.2.1",
+    version="1.3.0",
 )
 
 # --- CORS ---
