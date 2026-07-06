@@ -11,6 +11,10 @@ let _authListener: { data: { subscription: { unsubscribe: () => void } } } | nul
 
 const SAVINGS_KEY = '@ourfinances_savings';
 
+// Polling interval for cross-device sync (milliseconds)
+const SYNC_POLL_INTERVAL = 15000;
+let _syncInterval: ReturnType<typeof setInterval> | null = null;
+
 export interface Profile {
   id: string;
   email: string;
@@ -178,6 +182,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
             budget,
             isLoading: false,
           });
+
+          // Start background sync polling for cross-device real-time updates
+          startSyncPolling();
         } catch (err) {
           // Session expired or network error — sign out cleanly
           await supabase.auth.signOut().catch(() => {});
@@ -225,6 +232,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         transactions,
         isLoading: false,
       });
+
+      // Start background sync for cross-device real-time updates
+      startSyncPolling();
     } catch (err: any) {
       set({ error: err.message || 'Login failed', isLoading: false });
       throw err;
@@ -268,6 +278,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         transactions,
         isLoading: false,
       });
+
+      // Start background sync for cross-device real-time updates
+      startSyncPolling();
     } catch (err: any) {
       set({ error: err.message || 'Sign up failed', isLoading: false });
       throw err;
@@ -275,6 +288,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   },
 
   logout: async () => {
+    // Stop background sync polling
+    stopSyncPolling();
+
     // Clean up auth listener
     if (_authListener) {
       _authListener.data.subscription.unsubscribe();
@@ -592,3 +608,37 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
     } catch {}
   },
 }));
+
+/** Start background polling so both partners see each other's changes in near real-time. */
+function startSyncPolling() {
+  stopSyncPolling();
+  _syncInterval = setInterval(async () => {
+    try {
+      const store = useBudgetStore.getState();
+      if (!store.token) return;
+
+      const [transactions, budget, savingsGoals] = await Promise.all([
+        api.getTransactions(),
+        api.getBudget(),
+        api.getSavingsGoals(),
+      ]);
+
+      useBudgetStore.setState({
+        transactions,
+        budget,
+        savingsGoals,
+      });
+      persistSavings(savingsGoals);
+    } catch {
+      // Silently retry on next interval
+    }
+  }, SYNC_POLL_INTERVAL);
+}
+
+/** Stop the background sync polling. */
+function stopSyncPolling() {
+  if (_syncInterval !== null) {
+    clearInterval(_syncInterval);
+    _syncInterval = null;
+  }
+}

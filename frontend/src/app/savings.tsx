@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -64,9 +64,11 @@ export default function SavingsScreen() {
   const [editName, setEditName] = useState('');
   const [editTarget, setEditTarget] = useState('');
 
-  // Add/Withdraw inputs per goal (keyed by goalId)
-  const [addAmounts, setAddAmounts] = useState<Record<string, string>>({});
-  const [wdAmounts, setWdAmounts] = useState<Record<string, string>>({});
+  // Uncontrolled add/withdraw inputs — use refs to avoid re-render-on-keystroke focus loss
+  const addAmountText = useRef<Record<string, string>>({});
+  const wdAmountText = useRef<Record<string, string>>({});
+  const [addClearKey, setAddClearKey] = useState<Record<string, number>>({});
+  const [wdClearKey, setWdClearKey] = useState<Record<string, number>>({});
 
   const handleCreateGoal = useCallback(() => {
     const target = parseFloat(newTarget);
@@ -99,21 +101,23 @@ export default function SavingsScreen() {
   }, [deleteSavingsGoal, showMsg]);
 
   const handleAdd = useCallback((goal: SavingsGoal) => {
-    const amount = parseFloat(addAmounts[goal.id] || '');
+    const amount = parseFloat(addAmountText.current[goal.id] || '');
     if (isNaN(amount) || amount <= 0) { showMsg('Enter a valid amount.'); return; }
     addToSavings(goal.id, amount);
-    setAddAmounts((prev) => ({ ...prev, [goal.id]: '' }));
+    addAmountText.current[goal.id] = '';
+    setAddClearKey((prev) => ({ ...prev, [goal.id]: (prev[goal.id] || 0) + 1 }));
     showMsg(`Added $${amount.toFixed(2)} to "${goal.name}"!`);
-  }, [addAmounts, addToSavings, showMsg]);
+  }, [addToSavings, showMsg]);
 
   const handleWithdraw = useCallback((goal: SavingsGoal) => {
-    const amount = parseFloat(wdAmounts[goal.id] || '');
+    const amount = parseFloat(wdAmountText.current[goal.id] || '');
     if (isNaN(amount) || amount <= 0) { showMsg('Enter a valid amount.'); return; }
     if (amount > goal.saved_amount) { showMsg(`Only $${goal.saved_amount.toFixed(2)} saved in "${goal.name}".`); return; }
     withdrawFromSavings(goal.id, amount);
-    setWdAmounts((prev) => ({ ...prev, [goal.id]: '' }));
+    wdAmountText.current[goal.id] = '';
+    setWdClearKey((prev) => ({ ...prev, [goal.id]: (prev[goal.id] || 0) + 1 }));
     showMsg(`Withdrew $${amount.toFixed(2)} from "${goal.name}".`);
-  }, [wdAmounts, withdrawFromSavings, showMsg]);
+  }, [withdrawFromSavings, showMsg]);
 
   const handleQuickAdd = useCallback((goal: SavingsGoal, amount: number) => {
     addToSavings(goal.id, amount);
@@ -393,12 +397,13 @@ export default function SavingsScreen() {
 
                   <View style={styles.rowInput}>
                     <TextInput
+                      key={`add-${goal.id}-${addClearKey[goal.id] || 0}`}
                       style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                       placeholder="Amount"
                       placeholderTextColor={colors.onSurfaceVariant}
                       keyboardType="decimal-pad"
-                      value={addAmounts[goal.id] || ''}
-                      onChangeText={(t) => setAddAmounts((p) => ({ ...p, [goal.id]: t }))}
+                      defaultValue=""
+                      onChangeText={(t) => { addAmountText.current[goal.id] = t; }}
                     />
                     <TouchableOpacity style={[styles.btn, { backgroundColor: colors.income }]} onPress={() => handleAdd(goal)}>
                       <Text style={styles.btnText}>Add</Text>
@@ -423,12 +428,13 @@ export default function SavingsScreen() {
                 <View>
                   <View style={styles.rowInput}>
                     <TextInput
+                      key={`wd-${goal.id}-${wdClearKey[goal.id] || 0}`}
                       style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                       placeholder="Amount"
                       placeholderTextColor={colors.onSurfaceVariant}
                       keyboardType="decimal-pad"
-                      value={wdAmounts[goal.id] || ''}
-                      onChangeText={(t) => setWdAmounts((p) => ({ ...p, [goal.id]: t }))}
+                      defaultValue=""
+                      onChangeText={(t) => { wdAmountText.current[goal.id] = t; }}
                     />
                     <TouchableOpacity style={[styles.btn, { backgroundColor: colors.expense }]} onPress={() => handleWithdraw(goal)}>
                       <Text style={styles.btnText}>Withdraw</Text>
@@ -537,7 +543,7 @@ export default function SavingsScreen() {
         </TouchableOpacity>
       </ScaleDecorator>
     );
-  }, [colors, expandedGoal, activeSection, addAmounts, wdAmounts, editName, editTarget, user,
+  }, [colors, expandedGoal, activeSection, editName, editTarget, user,
       toggleGoal, handleAdd, handleWithdraw, handleQuickAdd, toggleAutoSave, setAutoSavePct,
       updateSavingsGoal, handleDeleteGoal, showMsg]);
 
@@ -569,8 +575,7 @@ export default function SavingsScreen() {
         ListFooterComponent={ListFooter}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        activationDistance={10}
-        extraData={{ expandedGoal, activeSection }}
+        activationDistance={10}                extraData={{ expandedGoal, activeSection, editName, editTarget }}
         containerStyle={{ flex: 1 }}
       />
     </SafeAreaView>
