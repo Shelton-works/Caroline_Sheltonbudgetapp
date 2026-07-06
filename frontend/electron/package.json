@@ -10,9 +10,10 @@
   },
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder build --win",
-    "build:portable": "electron-builder build --win portable",
-    "release": "electron-builder build --win --publish always"
+    "export:web": "npx cross-env EXPO_PUBLIC_API_URL=https://caroline-sheltonbudgetapp.onrender.com npx expo export --platform web",
+    "build": "npm run export:web && electron-builder build --win",
+    "build:portable": "npm run export:web && electron-builder build --win portable",
+    "release": "npm run export:web && electron-builder build --win --publish always"
   },
   "build": {
     "appId": "com.ourfinances.desktop",
