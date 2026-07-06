@@ -1,17 +1,17 @@
 {
   "version": "1.3.0",
-  "release_notes": "v1.3.0 — Savings input focus fix, real-time cross-device sync, and stability improvements.",
+  "release_notes": "v1.3.0 — Savings input focus fix, real-time cross-device sync, push notifications for partner activity, 'Check for Updates' button, and stability improvements.",
   "release_date": "2026-07-06",
   "platforms": {
     "windows": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.3.0/Our+Finances+Setup+1.3.0.exe",
-      "checksum_sha256": "c1c8730aef3883b28d4e46a2941ae8aab7c8b67251f63b5325b339575906d66d",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.3.0/Our.Finances.Setup.1.3.0.exe",
+      "checksum_sha256": "c573f918fe7bd8dec60874b3381e054d5d23f03c54a7ac60a33dd45a023b5b15",
       "minimum_version": "1.0.0",
       "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.3.0"
     },
     "android": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.3.0/Our+Finances+1.3.0.apk",
-      "checksum_sha256": "6b0874341dd8c7ff01002770e52f33e3a6b17c944cce62d2e708f6d613f5e07d",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.3.0/Our.Finances.1.3.0.apk",
+      "checksum_sha256": "23eaf530d103e393a4c20c25ad067ff95de2304799c2689be3c91a88198ac8e0",
       "minimum_version": "1.0.0",
       "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.3.0"
     }
