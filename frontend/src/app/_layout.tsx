@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, useRef } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from 'expo-router';
-import { useColorScheme, ActivityIndicator, View, Text } from 'react-native';
+import { useColorScheme, ActivityIndicator, View, Text, Platform } from 'react-native';
 import * as SplashScreen from 'expo-splash-screen';
+import * as Notifications from 'expo-notifications';
 import {
   useFonts,
   Montserrat_400Regular,
@@ -13,6 +14,7 @@ import {
 import OnboardingScreen from '@/components/OnboardingScreen';
 import UpdateNotification from '@/components/UpdateNotification';
 import { useBudgetStore } from '@/store/useBudgetStore';
+import { api } from '@/lib/api';
 import AppTabs from '@/components/app-tabs';
 
 // Prevent splash from auto-hiding
@@ -23,6 +25,49 @@ export default function RootLayout() {
   const { token, isLoading, init } = useBudgetStore();
   const [initialized, setInitialized] = useState(false);
   const [initError, setInitError] = useState<string | null>(null);
+
+  // Track whether we've already registered push notifications this session
+  const pushRegistered = useRef(false);
+
+  // Register for push notifications when user is logged in
+  useEffect(() => {
+    if (!token || pushRegistered.current) return;
+    pushRegistered.current = true;
+
+    (async () => {
+      try {
+        // Only register on physical Android/iOS devices
+        if (Platform.OS === 'web') return;
+
+        // Set up Android notification channel
+        if (Platform.OS === 'android') {
+          await Notifications.setNotificationChannelAsync('default', {
+            name: 'default',
+            importance: Notifications.AndroidImportance.MAX,
+          });
+        }
+
+        // Request permission (may prompt the user)
+        const { status } = await Notifications.requestPermissionsAsync();
+        if (status !== 'granted') {
+          console.log('Push notification permission not granted');
+          return;
+        }
+
+        // Get the Expo push token
+        const tokenData = await Notifications.getExpoPushTokenAsync({
+          projectId: 'b0db9be5-501d-47ae-809c-6c760f4ca974',
+        });
+
+        // Send token to backend
+        await api.registerPushToken(tokenData.data);
+        console.log('Push token registered:', tokenData.data);
+      } catch (err) {
+        // Silently fail — push notifications are a nice-to-have, not critical
+        console.log('Failed to register push notifications:', err);
+      }
+    })();
+  }, [token]);
 
   // Load Montserrat font via @expo-google-fonts/montserrat
   // Use module variables as keys so the package auto-registers proper weight metadata

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   useColorScheme,
   Share,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '../store/useBudgetStore';
@@ -32,6 +33,53 @@ export default function SettingsScreen() {
   const [limit, setLimit] = useState(budget?.monthly_limit.toString() || '2000');
   const [linkError, setLinkError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+
+  // Update check state
+  const [updateState, setUpdateState] = useState<
+    { status: 'idle' | 'checking' | 'uptodate' | 'available' | 'error'; message?: string }
+  >({ status: 'idle' });
+
+  const isElectron = !!(Platform.OS === 'web' && (window as any).electronAPI);
+
+  // Only show update-check results when the user explicitly pressed the button
+  const userInitiated = useRef(false);
+
+  // Listen for update events from the main process
+  useEffect(() => {
+    const api = (window as any).electronAPI;
+    if (!api) return;
+
+    const cleanups = [
+      api.onUpdateNotAvailable(() => {
+        if (userInitiated.current) {
+          setUpdateState({ status: 'uptodate', message: 'You have the latest version!' });
+          userInitiated.current = false;
+        }
+      }),
+      api.onUpdateAvailable(() => {
+        if (userInitiated.current) {
+          setUpdateState({ status: 'available' });
+          userInitiated.current = false;
+        }
+      }),
+      api.onUpdateError((msg: string) => {
+        if (userInitiated.current) {
+          setUpdateState({ status: 'error', message: msg });
+          userInitiated.current = false;
+        }
+      }),
+    ];
+
+    return () => cleanups.forEach((fn) => fn?.());
+  }, []);
+
+  const handleCheckUpdates = useCallback(() => {
+    const api = (window as any).electronAPI;
+    if (!api) return;
+    userInitiated.current = true;
+    setUpdateState({ status: 'checking' });
+    api.checkForUpdates();
+  }, []);
 
   // Check if user has a linked (shared) group
   // A group is "linked" if more than one profile shares it
@@ -213,6 +261,75 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* App Info — Updates */}
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>App Info</Text>
+
+          <View style={styles.versionRow}>
+            <Text style={[styles.versionLabel, { color: colors.onSurfaceVariant }]}>Version</Text>
+            <Text style={[styles.versionValue, { color: colors.onSurface }]}>1.3.0</Text>
+          </View>
+
+          {isElectron ? (
+            <>
+              <TouchableOpacity
+                style={[
+                  styles.checkUpdatesBtn,
+                  {
+                    backgroundColor:
+                      updateState.status === 'checking' ? colors.surfaceContainerLow : colors.primary,
+                    borderColor: colors.primary,
+                  },
+                ]}
+                onPress={handleCheckUpdates}
+                disabled={updateState.status === 'checking'}
+              >
+                <Text
+                  style={[
+                    styles.checkUpdatesText,
+                    {
+                      color:
+                        updateState.status === 'checking' ? colors.onSurfaceVariant : '#FFFFFF',
+                    },
+                  ]}
+                >
+                  {updateState.status === 'checking'
+                    ? 'Checking for updates…'
+                    : 'Check for Updates'}
+                </Text>
+              </TouchableOpacity>
+
+              {updateState.status === 'uptodate' && (
+                <View style={styles.updateStatusRow}>
+                  <Text style={styles.upToDateEmoji}>✅</Text>
+                  <Text style={[styles.updateStatusText, { color: colors.income }]}>
+                    {updateState.message}
+                  </Text>
+                </View>
+              )}
+
+              {updateState.status === 'error' && (
+                <View style={styles.updateStatusRow}>
+                  <Text style={styles.upToDateEmoji}>⚠️</Text>
+                  <Text style={[styles.updateStatusText, { color: '#BA1A1A' }]} numberOfLines={2}>
+                    Update check failed: {updateState.message}
+                  </Text>
+                </View>
+              )}
+
+              {updateState.status === 'available' && (
+                <Text style={[styles.updateHint, { color: colors.onSurfaceVariant }]}>
+                  An update is available — see the banner at the top of the screen to download.
+                </Text>
+              )}
+            </>
+          ) : (
+            <Text style={[styles.updateHint, { color: colors.onSurfaceVariant }]}>
+              Updates are handled automatically through your device's app store.
+            </Text>
+          )}
+        </View>
+
         {/* Sign Out */}
         <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.expense }]} onPress={logout}>
           <Text style={[styles.logoutBtnText, { color: colors.expense }]}>Sign Out</Text>
@@ -291,4 +408,32 @@ const styles = StyleSheet.create({
   linkedSubtext: { fontSize: 13, marginTop: 2 },
   logoutBtn: { borderWidth: 1, borderRadius: 16, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', marginTop: 20, marginBottom: 40 },
   logoutBtnText: { fontSize: 15, fontWeight: '700' },
+
+  // App Info
+  versionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  versionLabel: { fontSize: 14, fontWeight: '500' },
+  versionValue: { fontSize: 14, fontWeight: '700' },
+  checkUpdatesBtn: {
+    width: '100%',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+  },
+  checkUpdatesText: { fontSize: 14, fontWeight: '700' },
+  updateStatusRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 16,
+  },
+  upToDateEmoji: { fontSize: 16 },
+  updateStatusText: { fontSize: 13, fontWeight: '600', flex: 1 },
+  updateHint: { fontSize: 12, fontWeight: '500', marginTop: 12, lineHeight: 16 },
 });

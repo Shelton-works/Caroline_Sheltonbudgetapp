@@ -1,5 +1,6 @@
 import datetime
 import uuid
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 from typing import Dict, List, Optional
@@ -27,6 +28,35 @@ class SavingsDepositWithdraw(BaseModel):
 
 class ReorderGoalsRequest(BaseModel):
     goal_ids: List[str]
+
+
+# ---------------------------------------------------------------------------
+# Push notification helper
+# ---------------------------------------------------------------------------
+
+
+async def send_savings_push_notification(partner_token: str, sender_name: str, amount: float, goal_name: str):
+    """Send a push notification to a partner when someone deposits into a savings goal."""
+    if not partner_token or not partner_token.startswith("ExponentPushToken"):
+        return
+
+    currency_symbol = "$"
+    body_text = f"{sender_name} deposited {currency_symbol}{amount:.2f} into '{goal_name}'"
+
+    payload = {
+        "to": partner_token,
+        "sound": "default",
+        "title": "Shared Savings Update",
+        "body": body_text,
+        "data": {"type": "savings_deposit"}
+    }
+
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post("https://exp.host/--/api/v2/push/send", json=payload)
+            print(f"Expo savings notification response: {response.status_code} - {response.text}")
+    except Exception as e:
+        print(f"Failed to dispatch Expo savings push notification: {e}")
 
 
 # ---------------------------------------------------------------------------
@@ -428,12 +458,30 @@ async def deposit_to_savings(
     if req.amount <= 0:
         raise HTTPException(status_code=400, detail="Amount must be positive")
 
+    sender_name = current_user["profile"].get("display_name", "Your partner")
+
+    # Resolve goal name for the notification
+    goal_name = "savings goal"
+
     if MOCK_MODE:
         goal = find_mock_goal(group_id, goal_id)
         if not goal:
             raise HTTPException(status_code=404, detail="Savings goal not found")
+        goal_name = goal.get("name", "savings goal")
         goal["saved_amount"] = float(goal["saved_amount"]) + req.amount
         add_contribution(goal_id, profile_id, req.amount)
+
+        # Dispatch notification to partner
+        partners = [p for p in MOCK_PROFILES.values() if p["group_id"] == group_id and p["id"] != profile_id]
+        for partner in partners:
+            if partner.get("expo_push_token"):
+                await send_savings_push_notification(
+                    partner["expo_push_token"],
+                    sender_name,
+                    req.amount,
+                    goal_name,
+                )
+
         return enrich_goal_with_contributions(goal)
 
     try:
@@ -441,6 +489,7 @@ async def deposit_to_savings(
         existing = next((g for g in goals if g["id"] == goal_id), None)
         if not existing:
             raise HTTPException(status_code=404, detail="Savings goal not found")
+        goal_name = existing.get("name", "savings goal")
         current_saved = float(existing.get("saved_amount") or 0)
         new_saved = current_saved + req.amount
         supabase_admin.update(
@@ -450,6 +499,21 @@ async def deposit_to_savings(
             goal_id,
         )
         add_contribution(goal_id, profile_id, req.amount)
+
+        # Dispatch notification to partner
+        profiles_res = supabase_admin.select("profiles", eq_col="group_id", eq_val=group_id)
+        if profiles_res.data:
+            for p in profiles_res.data:
+                if p.get("id") != profile_id:
+                    token = p.get("expo_push_token")
+                    if token:
+                        await send_savings_push_notification(
+                            token,
+                            sender_name,
+                            req.amount,
+                            goal_name,
+                        )
+
         res = supabase_admin.select("savings_goals", eq_col="id", eq_val=goal_id)
         goal = res.data[0] if res.data else {**existing, "saved_amount": new_saved}
         return enrich_goal_with_contributions(goal)
@@ -458,8 +522,21 @@ async def deposit_to_savings(
     except Exception as e:
         goal = find_mock_goal(group_id, goal_id)
         if goal:
+            goal_name = goal.get("name", "savings goal")
             goal["saved_amount"] = float(goal["saved_amount"]) + req.amount
             add_contribution(goal_id, profile_id, req.amount)
+
+            # Dispatch notification to partner (mock fallback)
+            partners = [p for p in MOCK_PROFILES.values() if p["group_id"] == group_id and p["id"] != profile_id]
+            for partner in partners:
+                if partner.get("expo_push_token"):
+                    await send_savings_push_notification(
+                        partner["expo_push_token"],
+                        sender_name,
+                        req.amount,
+                        goal_name,
+                    )
+
             return enrich_goal_with_contributions(goal)
         raise HTTPException(status_code=500, detail=f"Failed to deposit: {str(e)}")
 
