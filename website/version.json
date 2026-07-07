@@ -10,10 +10,10 @@
       "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.3.1"
     },
     "android": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.3.1/Our.Finances.1.3.1.apk",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.3.0/Our.Finances.1.3.0.apk",
       "checksum_sha256": "77ef85197fd1b2330ddc5ca5b9a986547cd0a012fc9dba5d35ace57746e33292",
       "minimum_version": "1.0.0",
-      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.3.1"
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.3.0"
     }
   }
 }
