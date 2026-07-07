@@ -27,19 +27,27 @@ export default function UpdateNotification() {
 
     const cleanups = [
       api.onUpdateAvailable((version: string) => {
+        console.log(`[update] Update available: v${version}`);
         setState({ status: 'available', version });
         setDismissed(false);
       }),
-      api.onUpdateNotAvailable(() => {
-        // No update — stay idle
+      api.onUpdateNotAvailable((version?: string) => {
+        if (version) {
+          console.log(`[update] No update available (v${version} is current)`);
+        } else {
+          console.log('[update] No update available — you are on the latest version');
+        }
       }),
       api.onUpdateDownloadProgress((percent: number) => {
+        console.log(`[update] Downloading... ${Math.round(percent)}%`);
         setState({ status: 'downloading', percent });
       }),
       api.onUpdateDownloaded((version: string) => {
+        console.log(`[update] Update v${version} downloaded and ready to install`);
         setState({ status: 'downloaded', version });
       }),
       api.onUpdateError((message: string) => {
+        console.error(`[update] Error: ${message}`);
         setState({ status: 'error', message });
       }),
     ];

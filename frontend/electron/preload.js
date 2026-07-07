@@ -11,7 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('update-available', handler);
   },
   onUpdateNotAvailable: (callback) => {
-    const handler = () => callback();
+    const handler = (_event, version) => callback(version);
     ipcRenderer.on('update-not-available', handler);
     return () => ipcRenderer.removeListener('update-not-available', handler);
   },

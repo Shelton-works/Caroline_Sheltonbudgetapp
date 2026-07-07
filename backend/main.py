@@ -5,6 +5,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from routers import partner, transactions, savings
 from updater import check_for_updates
+from auth import MOCK_MODE, supabase_admin
 
 app = FastAPI(
     title="Caroline Partner Budget API",
@@ -64,6 +65,13 @@ async def root():
 @app.get("/api/health")
 async def health():
     return {"status": "healthy"}
+
+
+@app.on_event("shutdown")
+async def shutdown():
+    """Clean up resources on server shutdown."""
+    if not MOCK_MODE and supabase_admin:
+        supabase_admin.close()
 
 
 if __name__ == "__main__":

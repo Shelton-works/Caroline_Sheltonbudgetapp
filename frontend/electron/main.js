@@ -118,7 +118,7 @@ function setupAutoUpdater() {
   autoUpdater.on('update-not-available', (info) => {
     console.log('[updater] No update available (current:', info.version, ')');
     if (mainWindow) {
-      mainWindow.webContents.send('update-not-available');
+      mainWindow.webContents.send('update-not-available', info.version);
     }
   });
 
