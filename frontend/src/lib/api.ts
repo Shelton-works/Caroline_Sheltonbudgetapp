@@ -178,6 +178,12 @@ class ApiClient {
       body: JSON.stringify({ code }),
     });
   }
+
+  async disconnectPartner(): Promise<{ status: string; group_id: string }> {
+    return this.request('/api/partner/disconnect', {
+      method: 'POST',
+    });
+  }
 }
 
 export const api = new ApiClient();

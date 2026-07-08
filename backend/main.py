@@ -10,7 +10,7 @@ from auth import MOCK_MODE, supabase_admin
 app = FastAPI(
     title="Caroline Partner Budget API",
     description="Real-time lightweight partner budgeting backend",
-    version="1.3.0",
+    version="2.0.0",
 )
 
 # --- CORS ---

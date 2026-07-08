@@ -74,6 +74,7 @@ interface BudgetState {
   addTransaction: (amount: number, type: 'expense' | 'income', category: string, memo: string) => Promise<void>;
   generatePartnerCode: () => Promise<void>;
   linkPartner: (code: string) => Promise<void>;
+  disconnectPartner: () => Promise<void>;
   updateBudgetLimit: (monthly_limit: number) => Promise<void>;
   setTheme: (theme: 'light' | 'dark') => void;
   createSavingsGoal: (name: string, target: number, autoSavePct?: number) => Promise<void>;
@@ -467,6 +468,41 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       });
     } catch (err: any) {
       set({ error: err.message || 'Linking failed', isLoading: false });
+      throw err;
+    }
+  },
+
+  disconnectPartner: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.disconnectPartner();
+
+      // Refresh state after unlinking
+      const [transactions, budget] = await Promise.all([
+        api.getTransactions(),
+        api.getBudget(),
+      ]);
+
+      // Sync savings for the new group
+      get().fetchSavings();
+
+      const currentUser = get().user;
+      const updatedUser = currentUser ? { ...currentUser, group_id: res.group_id } : null;
+
+      // Persist updated user
+      if (updatedUser) {
+        await AsyncStorage.setItem(USER_KEY, JSON.stringify(updatedUser));
+      }
+
+      set({
+        user: updatedUser,
+        budget,
+        transactions,
+        partnerCode: null,
+        isLoading: false,
+      });
+    } catch (err: any) {
+      set({ error: err.message || 'Failed to disconnect partner', isLoading: false });
       throw err;
     }
   },

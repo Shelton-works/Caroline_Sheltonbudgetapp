@@ -1,19 +1,19 @@
 {
-  "version": "1.3.1",
-  "release_notes": "v1.3.1 — Memory leak fix: optimized Supabase connection pooling for better performance and stability.",
-  "release_date": "2026-07-07",
+  "version": "2.0.0",
+  "release_notes": "v2.0.0 — Shared budget sync fixes, savings goal delete bug fix, and partner disconnection feature.",
+  "release_date": "2026-07-08",
   "platforms": {
     "windows": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.3.1/Our.Finances.Setup.1.3.1.exe",
-      "checksum_sha256": "685512197e2e66ff5da05a980ffd3f150de4759f6c546bb814b7da282dcdee61",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.0.0/Our.Finances.Setup.2.0.0.exe",
+      "checksum_sha256": "fe2a56ca5692a8a6ccee3a0fe641469a0c5831429926d8b4fcd02f8a9a587e65",
       "minimum_version": "1.0.0",
-      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.3.1"
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.0.0"
     },
     "android": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v1.3.1/Our.Finances.1.3.1.apk",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.0.0/Our.Finances.2.0.0.apk",
       "checksum_sha256": "67724e392e6fa78fddc3ad1233b8f2567d89a7b5a226b334d4a03c7b3d81932b",
       "minimum_version": "1.0.0",
-      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v1.3.1"
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.0.0"
     }
   }
 }

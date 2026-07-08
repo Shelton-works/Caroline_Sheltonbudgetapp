@@ -122,3 +122,65 @@ async def link_partner(req: LinkRequest, current_user: dict = Depends(get_curren
             return {"status": "success", "group_id": target_group_id}
             
         raise HTTPException(status_code=400, detail=f"Linking failed: {str(e)}")
+
+
+@router.post("/disconnect")
+async def disconnect_partner(current_user: dict = Depends(get_current_user)):
+    import datetime
+    user_id = current_user["user_id"]
+    current_group_id = current_user["group_id"]
+
+    if MOCK_MODE:
+        profiles_in_group = [p for p in MOCK_PROFILES.values() if p["group_id"] == current_group_id]
+        if len(profiles_in_group) <= 1:
+            raise HTTPException(status_code=400, detail="You are not connected to any partner")
+
+        # Create a new budget group for the disconnecting user
+        new_group_id = f"group-unlinked-{random.randint(100000, 999999)}"
+        MOCK_BUDGET_GROUPS[new_group_id] = {
+            "id": new_group_id,
+            "name": f"{current_user['profile'].get('display_name', 'User')}'s Budget",
+            "fluid_balance": 0.00,
+            "monthly_limit": 2000.00,
+            "created_at": datetime.datetime.now().isoformat()
+        }
+
+        # Update the user's profile to point to the new group
+        if user_id in MOCK_PROFILES:
+            MOCK_PROFILES[user_id]["group_id"] = new_group_id
+        current_user["group_id"] = new_group_id
+        current_user["profile"]["group_id"] = new_group_id
+
+        # Rename the other partner's budget group back to a single name
+        other_profiles = [p for p in profiles_in_group if p["id"] != user_id]
+        if other_profiles and current_group_id in MOCK_BUDGET_GROUPS:
+            other_name = other_profiles[0].get("display_name", "Partner")
+            MOCK_BUDGET_GROUPS[current_group_id]["name"] = f"{other_name}'s Budget"
+
+        return {"status": "success", "group_id": new_group_id}
+
+    try:
+        # Check if they are actually in a shared group
+        profiles_res = supabase_admin.select("profiles", eq_col="group_id", eq_val=current_group_id)
+        if not profiles_res.data or len(profiles_res.data) <= 1:
+            raise HTTPException(status_code=400, detail="You are not connected to any partner")
+
+        # Create a new budget group in Supabase
+        group_res = supabase_admin.insert(
+            "budget_groups", {"name": "My Budget", "fluid_balance": 0.0, "monthly_limit": 2000.0}
+        )
+        if not group_res.data:
+            raise HTTPException(status_code=500, detail="Failed to create a new budget group")
+        new_group_id = group_res.data[0]["id"]
+
+        # Update user's profile to point to the new group_id
+        update_res = supabase_admin.update("profiles", {"group_id": new_group_id}, "id", user_id)
+        if not update_res.data:
+            raise HTTPException(status_code=500, detail="Failed to update profile to new budget group")
+
+        return {"status": "success", "group_id": new_group_id}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Disconnecting failed: {str(e)}")
+

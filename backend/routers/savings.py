@@ -206,7 +206,13 @@ def upsert_db_goal(goal_data: dict) -> Optional[dict]:
     """Insert or update a savings goal in Supabase. Returns the saved record or None."""
     try:
         goal_id = goal_data.get("id")
+        exists = False
         if goal_id:
+            check_res = supabase_admin.select("savings_goals", eq_col="id", eq_val=goal_id)
+            if check_res.data:
+                exists = True
+
+        if exists:
             supabase_admin.update(
                 "savings_goals",
                 {k: v for k, v in goal_data.items() if k != "id"},
@@ -227,11 +233,14 @@ def upsert_db_goal(goal_data: dict) -> Optional[dict]:
 
 def delete_db_goal(goal_id: str) -> bool:
     try:
+        # Delete contributions first to avoid foreign key violations
+        supabase_admin.delete("savings_contributions", "goal_id", goal_id)
         supabase_admin.delete("savings_goals", "id", goal_id)
         return True
     except Exception as e:
         print(f"Error deleting savings goal: {e}")
         return False
+
 
 
 # ---------------------------------------------------------------------------
@@ -347,9 +356,7 @@ async def create_savings_goal(
     result = upsert_db_goal(goal_data)
     if result:
         return enrich_goal_with_contributions(result)
-    goals = get_mock_goals(group_id)
-    goals.append(goal_data)
-    return enrich_goal_with_contributions(goal_data)
+    raise HTTPException(status_code=500, detail="Failed to create savings goal in database")
 
 
 @router.post("/goals/reorder")
@@ -437,10 +444,6 @@ async def update_savings_goal(
     except HTTPException:
         raise
     except Exception as e:
-        goal = find_mock_goal(group_id, goal_id)
-        if goal:
-            goal.update(update_data)
-            return enrich_goal_with_contributions(goal)
         raise HTTPException(status_code=500, detail=f"Failed to update goal: {str(e)}")
 
 
@@ -520,24 +523,6 @@ async def deposit_to_savings(
     except HTTPException:
         raise
     except Exception as e:
-        goal = find_mock_goal(group_id, goal_id)
-        if goal:
-            goal_name = goal.get("name", "savings goal")
-            goal["saved_amount"] = float(goal["saved_amount"]) + req.amount
-            add_contribution(goal_id, profile_id, req.amount)
-
-            # Dispatch notification to partner (mock fallback)
-            partners = [p for p in MOCK_PROFILES.values() if p["group_id"] == group_id and p["id"] != profile_id]
-            for partner in partners:
-                if partner.get("expo_push_token"):
-                    await send_savings_push_notification(
-                        partner["expo_push_token"],
-                        sender_name,
-                        req.amount,
-                        goal_name,
-                    )
-
-            return enrich_goal_with_contributions(goal)
         raise HTTPException(status_code=500, detail=f"Failed to deposit: {str(e)}")
 
 
@@ -588,14 +573,6 @@ async def withdraw_from_savings(
     except HTTPException:
         raise
     except Exception as e:
-        goal = find_mock_goal(group_id, goal_id)
-        if goal:
-            current_saved = float(goal["saved_amount"])
-            if req.amount > current_saved:
-                raise HTTPException(status_code=400, detail="Insufficient savings")
-            goal["saved_amount"] = current_saved - req.amount
-            subtract_contribution(goal_id, profile_id, req.amount)
-            return enrich_goal_with_contributions(goal)
         raise HTTPException(status_code=500, detail=f"Failed to withdraw: {str(e)}")
 
 
@@ -626,8 +603,4 @@ async def delete_savings_goal(
     except HTTPException:
         raise
     except Exception as e:
-        goals = get_mock_goals(group_id)
-        idx = next((i for i, g in enumerate(goals) if g["id"] == goal_id), -1)
-        if idx != -1:
-            goals.pop(idx)
-        return {"status": "deleted", "goal_id": goal_id}
+        raise HTTPException(status_code=500, detail=f"Failed to delete goal: {str(e)}")

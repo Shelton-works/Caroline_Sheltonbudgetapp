@@ -9,6 +9,7 @@ import {
   useColorScheme,
   Share,
   Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '../store/useBudgetStore';
@@ -25,6 +26,7 @@ export default function SettingsScreen() {
     isLoading,
     generatePartnerCode,
     linkPartner,
+    disconnectPartner,
     updateBudgetLimit,
     logout,
   } = useBudgetStore();
@@ -119,6 +121,30 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleDisconnect = async () => {
+    setLinkError(null);
+    setSuccessMsg(null);
+    Alert.alert(
+      'Disconnect Partner',
+      'Are you sure you want to disconnect from your partner? You will no longer share a budget or savings goals, and you will be moved to a private budget.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Disconnect',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await disconnectPartner();
+              setSuccessMsg('Successfully disconnected from your partner.');
+            } catch (err: any) {
+              setLinkError(err.message || 'Failed to disconnect. Please try again.');
+            }
+          },
+        },
+      ]
+    );
+  };
+
   const handleUpdateLimit = async () => {
     const numLimit = parseFloat(limit);
     if (!isNaN(numLimit) && numLimit > 0) {
@@ -172,6 +198,16 @@ export default function SettingsScreen() {
                   </Text>
                 </View>
               </View>
+              {linkError && <Text style={[styles.errorText, { marginTop: 8 }]}>{linkError}</Text>}
+              <TouchableOpacity
+                style={[styles.disconnectBtn, { borderColor: colors.expense }]}
+                onPress={handleDisconnect}
+                disabled={isLoading}
+              >
+                <Text style={[styles.disconnectBtnText, { color: colors.expense }]}>
+                  {isLoading ? 'Disconnecting...' : 'Disconnect Partner'}
+                </Text>
+              </TouchableOpacity>
             </View>
           ) : (
             <View>
@@ -267,7 +303,7 @@ export default function SettingsScreen() {
 
           <View style={styles.versionRow}>
             <Text style={[styles.versionLabel, { color: colors.onSurfaceVariant }]}>Version</Text>
-            <Text style={[styles.versionValue, { color: colors.onSurface }]}>1.3.1</Text>
+            <Text style={[styles.versionValue, { color: colors.onSurface }]}>2.0.0</Text>
           </View>
 
           {isElectron ? (
@@ -436,4 +472,6 @@ const styles = StyleSheet.create({
   upToDateEmoji: { fontSize: 16 },
   updateStatusText: { fontSize: 13, fontWeight: '600', flex: 1 },
   updateHint: { fontSize: 12, fontWeight: '500', marginTop: 12, lineHeight: 16 },
+  disconnectBtn: { borderWidth: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
+  disconnectBtnText: { fontSize: 14, fontWeight: '700' },
 });

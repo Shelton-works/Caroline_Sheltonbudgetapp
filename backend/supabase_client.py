@@ -90,6 +90,20 @@ class DirectSupabaseClient:
             return SupabaseResponse(data=None, error=response.text)
         return SupabaseResponse(data=response.json(), error=None)
 
+    # Delete row(s) from a table
+    def delete(self, table: str, eq_col: str, eq_val: str) -> SupabaseResponse:
+        url = f"{self.url}/rest/v1/{table}"
+        params = {eq_col: f"eq.{eq_val}"}
+        headers = {**self.headers, "Prefer": "return=representation"}
+        response = self._client.delete(url, headers=headers, params=params)
+        if response.status_code >= 400:
+            return SupabaseResponse(data=None, error=response.text)
+        try:
+            return SupabaseResponse(data=response.json(), error=None)
+        except Exception:
+            return SupabaseResponse(data=[], error=None)
+
+
     def close(self):
         """Close the underlying HTTP client, releasing any pooled connections."""
         self._client.close()
