@@ -11,7 +11,7 @@
     },
     "android": {
       "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.0.0/Our.Finances.2.0.0.apk",
-      "checksum_sha256": "67724e392e6fa78fddc3ad1233b8f2567d89a7b5a226b334d4a03c7b3d81932b",
+      "checksum_sha256": "59813caa0e12de9b5d9e1290f39c13627c46270706705a8245b5beb329b655cc",
       "minimum_version": "1.0.0",
       "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.0.0"
     }
