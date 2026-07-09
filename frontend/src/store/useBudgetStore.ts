@@ -549,7 +549,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       });
       set({ savingsGoals: get().savingsGoals.map((g) => (g.id === newGoal.id ? serverGoal : g)) });
       persistSavings(get().savingsGoals);
-    } catch {}
+    } catch (err: any) {
+      set({ error: `Failed to sync goal: ${err.message}. It will be retried on next sync.` });
+    }
   },
 
   updateSavingsGoal: async (goalId: string, name: string, target: number) => {
@@ -562,7 +564,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 
     try {
       await api.updateSavingsGoal(goalId, { name, target_amount: target });
-    } catch {}
+    } catch (err: any) {
+      set({ error: `Failed to update goal: ${err.message}` });
+    }
   },
 
   updateAutoSavePct: async (goalId: string, pct: number) => {
@@ -576,7 +580,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 
     try {
       await api.updateSavingsGoal(goalId, { auto_save_percentage: clamped });
-    } catch {}
+    } catch (err: any) {
+      set({ error: `Failed to update auto-save: ${err.message}` });
+    }
   },
 
   addToSavings: async (goalId: string, amount: number) => {
@@ -589,7 +595,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 
     try {
       await api.savingsDeposit(goalId, amount);
-    } catch {}
+    } catch (err: any) {
+      set({ error: `Failed to deposit: ${err.message}` });
+    }
   },
 
   withdrawFromSavings: async (goalId: string, amount: number) => {
@@ -605,7 +613,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 
     try {
       await api.savingsWithdraw(goalId, amount);
-    } catch {}
+    } catch (err: any) {
+      set({ error: `Failed to withdraw: ${err.message}` });
+    }
   },
 
   reorderSavingsGoals: async (goalIds: string[]) => {
@@ -630,7 +640,9 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 
     try {
       await api.reorderSavingsGoals(goalIds);
-    } catch {}
+    } catch (err: any) {
+      set({ error: `Failed to reorder goals: ${err.message}` });
+    }
   },
 
   deleteSavingsGoal: async (goalId: string) => {
@@ -641,7 +653,11 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
 
     try {
       await api.deleteSavingsGoal(goalId);
-    } catch {}
+    } catch (err: any) {
+      // Backend delete failed — revert optimistic update
+      set({ savingsGoals: prev, error: `Failed to delete goal: ${err.message}` });
+      persistSavings(prev);
+    }
   },
 }));
 

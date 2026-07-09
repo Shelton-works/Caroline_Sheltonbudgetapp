@@ -193,53 +193,71 @@ def find_mock_goal(group_id: str, goal_id: str) -> Optional[dict]:
 # ---------------------------------------------------------------------------
 
 def get_db_goals(group_id: str) -> list:
-    """Return savings goals for a group from Supabase, or an empty list on failure."""
-    try:
-        res = supabase_admin.select("savings_goals", eq_col="group_id", eq_val=group_id)
-        return res.data if res.data else []
-    except Exception as e:
-        print(f"Error fetching savings goals: {e}")
-        return []
+    """Return savings goals for a group from Supabase."""
+    res = supabase_admin.select("savings_goals", eq_col="group_id", eq_val=group_id)
+    if res.error:
+        raise Exception(f"Supabase error fetching goals: {res.error}")
+    return res.data if res.data else []
 
 
-def upsert_db_goal(goal_data: dict) -> Optional[dict]:
-    """Insert or update a savings goal in Supabase. Returns the saved record or None."""
-    try:
-        goal_id = goal_data.get("id")
-        exists = False
-        if goal_id:
-            check_res = supabase_admin.select("savings_goals", eq_col="id", eq_val=goal_id)
-            if check_res.data:
-                exists = True
+def upsert_db_goal(goal_data: dict) -> dict:
+    """Insert or update a savings goal in Supabase. Returns the saved record."""
+    goal_id = goal_data.get("id")
+    exists = False
+    if goal_id:
+        check_res = supabase_admin.select("savings_goals", eq_col="id", eq_val=goal_id)
+        if check_res.error:
+            raise Exception(f"Supabase error checking goal: {check_res.error}")
+        if check_res.data:
+            exists = True
 
-        if exists:
-            supabase_admin.update(
-                "savings_goals",
-                {k: v for k, v in goal_data.items() if k != "id"},
-                "id",
-                goal_id,
-            )
-            res = supabase_admin.select("savings_goals", eq_col="id", eq_val=goal_id)
-            return res.data[0] if res.data else None
-        else:
-            goal_data["created_at"] = datetime.datetime.now().isoformat()
-            goal_data["updated_at"] = datetime.datetime.now().isoformat()
-            res = supabase_admin.insert("savings_goals", goal_data)
-            return res.data[0] if res.data else goal_data
-    except Exception as e:
-        print(f"Error upserting savings goal: {e}")
-        return None
+    if exists:
+        update_payload = {k: v for k, v in goal_data.items() if k != "id"}
+        update_payload["updated_at"] = datetime.datetime.now().isoformat()
+        update_res = supabase_admin.update(
+            "savings_goals",
+            update_payload,
+            "id",
+            goal_id,
+        )
+        if update_res.error:
+            raise Exception(f"Supabase error updating goal: {update_res.error}")
+        res = supabase_admin.select("savings_goals", eq_col="id", eq_val=goal_id)
+        if res.error:
+            raise Exception(f"Supabase error fetching updated goal: {res.error}")
+        return res.data[0] if res.data else goal_data
+    else:
+        goal_data["created_at"] = datetime.datetime.now().isoformat()
+        goal_data["updated_at"] = datetime.datetime.now().isoformat()
+        res = supabase_admin.insert("savings_goals", goal_data)
+        if res.error:
+            raise Exception(f"Supabase error inserting goal: {res.error}")
+        return res.data[0] if res.data else goal_data
 
 
-def delete_db_goal(goal_id: str) -> bool:
-    try:
-        # Delete contributions first to avoid foreign key violations
-        supabase_admin.delete("savings_contributions", "goal_id", goal_id)
-        supabase_admin.delete("savings_goals", "id", goal_id)
-        return True
-    except Exception as e:
-        print(f"Error deleting savings goal: {e}")
-        return False
+def delete_db_goal(goal_id: str, group_id: str) -> bool:
+    """
+    Delete a savings goal and its contributions, verifying the goal
+    belongs to the user's group. Returns True if a row was deleted.
+    """
+    # First verify the goal exists and belongs to the user's group
+    check_res = supabase_admin.select("savings_goals", eq_col="id", eq_val=goal_id)
+    if check_res.error:
+        raise Exception(f"Supabase error checking goal: {check_res.error}")
+    if not check_res.data:
+        return False  # Goal not found
+    if check_res.data[0].get("group_id") != group_id:
+        raise HTTPException(status_code=403, detail="Goal does not belong to your group")
+
+    # Delete contributions (redundant with CASCADE but explicit)
+    supabase_admin.delete("savings_contributions", "goal_id", goal_id)
+
+    # Delete the goal
+    del_res = supabase_admin.delete("savings_goals", "id", goal_id)
+    if del_res.error:
+        raise Exception(f"Supabase error deleting goal: {del_res.error}")
+
+    return True
 
 
 
@@ -595,12 +613,7 @@ async def delete_savings_goal(
         MOCK_SAVINGS_CONTRIBUTIONS.pop(goal_id, None)
         return {"status": "deleted", "goal_id": removed["id"]}
 
-    try:
-        deleted = delete_db_goal(goal_id)
-        if not deleted:
-            raise HTTPException(status_code=404, detail="Savings goal not found")
-        return {"status": "deleted", "goal_id": goal_id}
-    except HTTPException:
-        raise
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to delete goal: {str(e)}")
+    deleted = delete_db_goal(goal_id, group_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Savings goal not found")
+    return {"status": "deleted", "goal_id": goal_id}

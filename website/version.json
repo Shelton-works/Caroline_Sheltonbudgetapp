@@ -1,19 +1,19 @@
 {
-  "version": "2.0.0",
-  "release_notes": "v2.0.0 — Shared budget sync fixes, savings goal delete bug fix, and partner disconnection feature.",
-  "release_date": "2026-07-08",
+  "version": "2.1.0",
+  "release_notes": "v2.1.0 — Savings sync fix, delete verification, and improved error handling",
+  "release_date": "2026-07-09",
   "platforms": {
     "windows": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.0.0/Our.Finances.Setup.2.0.0.exe",
-      "checksum_sha256": "fe2a56ca5692a8a6ccee3a0fe641469a0c5831429926d8b4fcd02f8a9a587e65",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.1.0/Our.Finances.Setup.2.1.0.exe",
+      "checksum_sha256": "b8c079f1740ee7e048527db24c3ff3e4d86c626a9ce9ac40f085fc0f445f3aab",
       "minimum_version": "1.0.0",
-      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.0.0"
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.1.0"
     },
     "android": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.0.0/Our.Finances.2.0.0.apk",
-      "checksum_sha256": "59813caa0e12de9b5d9e1290f39c13627c46270706705a8245b5beb329b655cc",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.1.0/Our.Finances.2.1.0.apk",
+      "checksum_sha256": "cc22ac45140dac73de863d0629e14a05721fefb7d2e9cbae94a6c5f3d7783235",
       "minimum_version": "1.0.0",
-      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.0.0"
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.1.0"
     }
   }
 }

@@ -303,7 +303,7 @@ export default function SettingsScreen() {
 
           <View style={styles.versionRow}>
             <Text style={[styles.versionLabel, { color: colors.onSurfaceVariant }]}>Version</Text>
-            <Text style={[styles.versionValue, { color: colors.onSurface }]}>2.0.0</Text>
+            <Text style={[styles.versionValue, { color: colors.onSurface }]}>2.1.0</Text>
           </View>
 
           {isElectron ? (
