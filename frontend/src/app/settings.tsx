@@ -12,6 +12,7 @@ import {
   Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import Constants from 'expo-constants';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { Colors, Spacing, BorderRadius } from '../constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -74,6 +75,7 @@ export default function SettingsScreen() {
   >({ status: 'idle' });
 
   const isElectron = !!(Platform.OS === 'web' && (window as any).electronAPI);
+  const appVersion = Constants.expoConfig?.version || (isElectron ? '2.2.0' : '1.0.0');
 
   const userInitiated = useRef(false);
 
@@ -374,7 +376,7 @@ export default function SettingsScreen() {
 
           <View style={styles.versionRow}>
             <Text style={[styles.versionLabel, { color: colors.onSurfaceVariant }]}>Version</Text>
-            <Text style={[styles.versionValue, { color: colors.onSurface }]}>2.2.0</Text>
+            <Text style={[styles.versionValue, { color: colors.onSurface }]}>{appVersion}</Text>
           </View>
 
           {isElectron ? (
