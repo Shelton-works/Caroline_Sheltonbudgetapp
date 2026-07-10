@@ -1,19 +1,19 @@
 {
-  "version": "2.1.0",
-  "release_notes": "v2.1.0 — Savings sync fix, delete verification, and improved error handling",
-  "release_date": "2026-07-09",
+  "version": "2.2.0",
+  "release_notes": "v2.2.0 — Edit/delete transactions, analytics filter fix, configurable budgets, and transfer button",
+  "release_date": "2026-07-10",
   "platforms": {
     "windows": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.1.0/Our.Finances.Setup.2.1.0.exe",
-      "checksum_sha256": "b8c079f1740ee7e048527db24c3ff3e4d86c626a9ce9ac40f085fc0f445f3aab",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.2.0/Our.Finances.Setup.2.2.0.exe",
+      "checksum_sha256": "67a17ec841e1fe827ab685cc536392e2e30c2ddb134f7f805cc24b5ce3e7ad3a",
       "minimum_version": "1.0.0",
-      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.1.0"
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.2.0"
     },
     "android": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.1.0/Our.Finances.2.1.0.apk",
-      "checksum_sha256": "cc22ac45140dac73de863d0629e14a05721fefb7d2e9cbae94a6c5f3d7783235",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.2.0/Our.Finances.2.2.0.apk",
+      "checksum_sha256": "e9b0b49fa0e73900b9d8973049ed84a9e485893bf78cc6a82b7d9ad387d26c16",
       "minimum_version": "1.0.0",
-      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.1.0"
+      "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.2.0"
     }
   }
 }
