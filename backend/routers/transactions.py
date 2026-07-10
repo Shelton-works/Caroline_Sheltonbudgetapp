@@ -15,6 +15,12 @@ class TransactionCreate(BaseModel):
     category: str
     memo: str
 
+class TransactionUpdate(BaseModel):
+    amount: Optional[float] = None
+    type: Optional[str] = None # 'expense' or 'income'
+    category: Optional[str] = None
+    memo: Optional[str] = None
+
 class BudgetUpdate(BaseModel):
     monthly_limit: Optional[float] = None
     fluid_balance: Optional[float] = None
@@ -118,6 +124,161 @@ async def update_budget(update_req: BudgetUpdate, current_user: dict = Depends(g
             MOCK_BUDGET_GROUPS[group_id].update(update_data)
             return MOCK_BUDGET_GROUPS[group_id]
         raise HTTPException(status_code=400, detail=f"Failed to update budget: {str(e)}")
+
+
+@router.put("/{transaction_id}")
+async def update_transaction(
+    transaction_id: str,
+    tx_in: TransactionUpdate,
+    current_user: dict = Depends(get_current_user),
+):
+    group_id = current_user["group_id"]
+    user_id = current_user["user_id"]
+
+    if not group_id:
+        raise HTTPException(status_code=400, detail="User is not associated with any budget group")
+
+    update_data = {k: v for k, v in tx_in.model_dump().items() if v is not None}
+    if not update_data:
+        raise HTTPException(status_code=400, detail="No fields to update")
+
+    if MOCK_MODE:
+        # Find transaction in mock
+        tx_idx = next(
+            (i for i, t in enumerate(MOCK_TRANSACTIONS)
+             if t["id"] == transaction_id and t["group_id"] == group_id),
+            None,
+        )
+        if tx_idx is None:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+
+        old_tx = MOCK_TRANSACTIONS[tx_idx]
+
+        # Calculate balance delta
+        old_amount = float(old_tx["amount"])
+        new_amount = float(update_data.get("amount", old_amount))
+        old_type = old_tx["type"]
+        new_type = update_data.get("type", old_type)
+
+        # Undo old effect, apply new effect
+        if old_type == "expense":
+            MOCK_BUDGET_GROUPS[group_id]["fluid_balance"] += old_amount
+        else:
+            MOCK_BUDGET_GROUPS[group_id]["fluid_balance"] -= old_amount
+
+        if new_type == "expense":
+            MOCK_BUDGET_GROUPS[group_id]["fluid_balance"] -= new_amount
+        else:
+            MOCK_BUDGET_GROUPS[group_id]["fluid_balance"] += new_amount
+
+        # Apply update
+        old_tx.update({k: v for k, v in update_data.items() if v is not None})
+        return {"transaction": old_tx, "fluid_balance": MOCK_BUDGET_GROUPS[group_id]["fluid_balance"]}
+
+    try:
+        # Fetch the existing transaction to compute balance delta
+        tx_res = supabase_admin.select("transactions", eq_col="id", eq_val=transaction_id)
+        if not tx_res.data:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+
+        old_tx = tx_res.data[0]
+        if old_tx["group_id"] != group_id:
+            raise HTTPException(status_code=403, detail="You do not own this transaction")
+
+        old_amount = float(old_tx["amount"])
+        new_amount = float(update_data.get("amount", old_amount))
+        old_type = old_tx["type"]
+        new_type = update_data.get("type", old_type)
+
+        # Update the transaction record
+        update_res = supabase_admin.update("transactions", update_data, "id", transaction_id)
+        if not update_res.data:
+            raise HTTPException(status_code=500, detail="Failed to update transaction")
+
+        # Recompute balance
+        budget_res = supabase_admin.select("budget_groups", eq_col="id", eq_val=group_id)
+        current_balance = float(budget_res.data[0]["fluid_balance"]) if budget_res.data else 0.0
+
+        # Undo old effect
+        if old_type == "expense":
+            current_balance += old_amount
+        else:
+            current_balance -= old_amount
+
+        # Apply new effect
+        if new_type == "expense":
+            current_balance -= new_amount
+        else:
+            current_balance += new_amount
+
+        supabase_admin.update("budget_groups", {"fluid_balance": current_balance}, "id", group_id)
+
+        return {"transaction": update_res.data[0], "fluid_balance": current_balance}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to update transaction: {str(e)}")
+
+
+@router.delete("/{transaction_id}")
+async def delete_transaction(
+    transaction_id: str,
+    current_user: dict = Depends(get_current_user),
+):
+    group_id = current_user["group_id"]
+    user_id = current_user["user_id"]
+
+    if not group_id:
+        raise HTTPException(status_code=400, detail="User is not associated with any budget group")
+
+    if MOCK_MODE:
+        tx_idx = next(
+            (i for i, t in enumerate(MOCK_TRANSACTIONS)
+             if t["id"] == transaction_id and t["group_id"] == group_id),
+            None,
+        )
+        if tx_idx is None:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+
+        tx = MOCK_TRANSACTIONS.pop(tx_idx)
+
+        # Reverse the balance effect
+        amount = float(tx["amount"])
+        if tx["type"] == "expense":
+            MOCK_BUDGET_GROUPS[group_id]["fluid_balance"] += amount
+        else:
+            MOCK_BUDGET_GROUPS[group_id]["fluid_balance"] -= amount
+
+        return {"status": "deleted", "fluid_balance": MOCK_BUDGET_GROUPS[group_id]["fluid_balance"]}
+
+    try:
+        tx_res = supabase_admin.select("transactions", eq_col="id", eq_val=transaction_id)
+        if not tx_res.data:
+            raise HTTPException(status_code=404, detail="Transaction not found")
+
+        tx = tx_res.data[0]
+        if tx["group_id"] != group_id:
+            raise HTTPException(status_code=403, detail="You do not own this transaction")
+
+        # Reverse balance effect
+        amount = float(tx["amount"])
+        budget_res = supabase_admin.select("budget_groups", eq_col="id", eq_val=group_id)
+        current_balance = float(budget_res.data[0]["fluid_balance"]) if budget_res.data else 0.0
+
+        if tx["type"] == "expense":
+            current_balance += amount
+        else:
+            current_balance -= amount
+
+        supabase_admin.update("budget_groups", {"fluid_balance": current_balance}, "id", group_id)
+        supabase_admin.delete("transactions", "id", transaction_id)
+
+        return {"status": "deleted", "fluid_balance": current_balance}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Failed to delete transaction: {str(e)}")
+
 
 @router.get("/")
 async def get_transactions(current_user: dict = Depends(get_current_user)):

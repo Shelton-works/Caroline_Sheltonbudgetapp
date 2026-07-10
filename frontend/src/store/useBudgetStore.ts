@@ -72,6 +72,8 @@ interface BudgetState {
   fetchData: () => Promise<void>;
   fetchSavings: () => Promise<void>;
   addTransaction: (amount: number, type: 'expense' | 'income', category: string, memo: string) => Promise<void>;
+  updateTransaction: (id: string, data: { amount?: number; type?: 'expense' | 'income'; category?: string; memo?: string }) => Promise<void>;
+  deleteTransaction: (id: string) => Promise<void>;
   generatePartnerCode: () => Promise<void>;
   linkPartner: (code: string) => Promise<void>;
   disconnectPartner: () => Promise<void>;
@@ -424,6 +426,61 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         error: `Failed to save transaction: ${err.message}. Rolled back.`,
       });
       throw err;
+    }
+  },
+
+  updateTransaction: async (id: string, data: { amount?: number; type?: 'expense' | 'income'; category?: string; memo?: string }) => {
+    const currentTransactions = get().transactions;
+    const currentBudget = get().budget;
+    if (!currentBudget) return;
+
+    // Find the original transaction
+    const original = currentTransactions.find((t) => t.id === id);
+    if (!original) return;
+
+    // Optimistic update
+    const updatedTx = { ...original, ...data };
+    set({
+      transactions: currentTransactions.map((t) => (t.id === id ? updatedTx : t)),
+    });
+
+    try {
+      const result = await api.updateTransaction(id, data);
+      set((state) => ({
+        transactions: state.transactions.map((t) =>
+          t.id === id ? result.transaction : t,
+        ),
+        budget: state.budget
+          ? { ...state.budget, fluid_balance: result.fluid_balance }
+          : null,
+      }));
+    } catch (err: any) {
+      // Revert on failure
+      set({
+        transactions: currentTransactions,
+        error: `Failed to update transaction: ${err.message}`,
+      });
+    }
+  },
+
+  deleteTransaction: async (id: string) => {
+    const currentTransactions = get().transactions;
+    const currentBudget = get().budget;
+
+    // Optimistic removal
+    set({ transactions: currentTransactions.filter((t) => t.id !== id) });
+
+    try {
+      const result = await api.deleteTransaction(id);
+      if (result.fluid_balance !== undefined && currentBudget) {
+        set({ budget: { ...currentBudget, fluid_balance: result.fluid_balance } });
+      }
+    } catch (err: any) {
+      // Revert on failure
+      set({
+        transactions: currentTransactions,
+        error: `Failed to delete transaction: ${err.message}`,
+      });
     }
   },
 

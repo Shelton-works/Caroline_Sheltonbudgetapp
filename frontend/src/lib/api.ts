@@ -100,6 +100,19 @@ class ApiClient {
     });
   }
 
+  async updateTransaction(id: string, data: { amount?: number; type?: string; category?: string; memo?: string }): Promise<any> {
+    return this.request(`/api/transactions/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  async deleteTransaction(id: string): Promise<any> {
+    return this.request(`/api/transactions/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   async registerPushToken(token: string): Promise<any> {
     return this.request('/api/transactions/register-push-token', {
       method: 'POST',

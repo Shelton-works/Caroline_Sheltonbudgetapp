@@ -9,6 +9,12 @@ import {
   ActivityIndicator,
   Animated,
   RefreshControl,
+  TextInput,
+  Modal,
+  Pressable,
+  KeyboardAvoidingView,
+  Platform,
+  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '../store/useBudgetStore';
@@ -48,6 +54,75 @@ function BalanceCountUp({ target, decimals = 2 }: { target: number; decimals?: n
   );
 }
 
+function TransactionRow({
+  tx,
+  index,
+  isLast,
+  colors,
+  onPress,
+  onLongPress,
+}: {
+  tx: any;
+  index: number;
+  isLast: boolean;
+  colors: any;
+  onPress: () => void;
+  onLongPress: () => void;
+}) {
+  const isExpense = tx.type === 'expense';
+  const amount = Number(tx.amount);
+  return (
+    <TouchableOpacity
+      key={tx.id || index}
+      onPress={onPress}
+      onLongPress={onLongPress}
+      delayLongPress={400}
+      style={[
+        styles.transactionItem,
+        !isLast && {
+          borderBottomWidth: 1,
+          borderBottomColor: colors.outlineVariant,
+        },
+      ]}
+    >
+      <View style={[styles.txIcon, { backgroundColor: colors.surfaceContainerLow }]}>
+        <Text style={styles.txIconEmoji}>
+          {tx.category === 'Transportation' ? '🚗'
+            : tx.category === 'House' ? '🏠'
+            : tx.category === 'Office' ? '💼'
+            : tx.category === 'Education' ? '🎓'
+            : tx.category === 'Food' ? '🛒'
+            : tx.category === 'Entertainment' ? '🎬'
+            : tx.category === 'Utilities' ? '💡'
+            : isExpense ? '💳' : '💰'}
+        </Text>
+      </View>
+      <View style={styles.txInfo}>
+        <Text style={[styles.txMemo, { color: colors.onSurface }]}>{tx.memo}</Text>
+        <Text style={[styles.txDate, { color: colors.onSurfaceVariant }]}>
+          {tx.category} • {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+        </Text>
+      </View>
+      <Text
+        style={[
+          styles.txAmount,
+          { color: isExpense ? colors.expense : colors.secondary },
+        ]}
+      >
+        {isExpense ? '-' : '+'}${amount.toFixed(2)}
+      </Text>
+    </TouchableOpacity>
+  );
+}
+
+type EditTxData = {
+  id: string;
+  amount: string;
+  memo: string;
+  category: string;
+  type: 'expense' | 'income';
+};
+
 export default function HomeScreen() {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
@@ -60,10 +135,16 @@ export default function HomeScreen() {
     error,
     fetchData,
     addTransaction,
+    updateTransaction,
+    deleteTransaction,
   } = useBudgetStore();
 
   const [modalVisible, setModalVisible] = useState(false);
+  const [modalIncomeTab, setModalIncomeTab] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [viewAllVisible, setViewAllVisible] = useState(false);
+  const [editTxVisible, setEditTxVisible] = useState(false);
+  const [editTx, setEditTx] = useState<EditTxData | null>(null);
 
   // Pull-to-refresh: manually refresh data
   const onRefresh = useCallback(async () => {
@@ -73,13 +154,80 @@ export default function HomeScreen() {
   }, [fetchData]);
 
   const fluidBalance = budget?.fluid_balance ?? 0;
-
-  // Group transactions for recent list
   const recentTransactions = transactions.slice(0, 6);
+
+  const openAddTransaction = useCallback((incomeTab = false) => {
+    setModalIncomeTab(incomeTab);
+    setModalVisible(true);
+  }, []);
+
+  const handleTransactionPress = useCallback((tx: any) => {
+    // Quick view — could expand, but for now just a placeholder
+  }, []);
+
+  const handleTransactionLongPress = useCallback((tx: any) => {
+    Alert.alert(
+      tx.memo || 'Transaction',
+      `$${Number(tx.amount).toFixed(2)} • ${tx.category}\nWhat would you like to do?`,
+      [
+        {
+          text: 'Edit',
+          onPress: () => {
+            setEditTx({
+              id: tx.id,
+              amount: tx.amount.toString(),
+              memo: tx.memo,
+              category: tx.category,
+              type: tx.type,
+            });
+            setEditTxVisible(true);
+          },
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            Alert.alert(
+              'Delete Transaction',
+              `Are you sure you want to delete "${tx.memo}" ($${Number(tx.amount).toFixed(2)})? This will adjust your balance.`,
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete',
+                  style: 'destructive',
+                  onPress: () => deleteTransaction(tx.id),
+                },
+              ]
+            );
+          },
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  }, [deleteTransaction]);
+
+  const handleEditSave = useCallback(async () => {
+    if (!editTx) return;
+    const parsedAmount = parseFloat(editTx.amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) return;
+    if (!editTx.memo.trim()) return;
+
+    await updateTransaction(editTx.id, {
+      amount: parsedAmount,
+      memo: editTx.memo.trim(),
+      category: editTx.category,
+      type: editTx.type,
+    });
+    setEditTxVisible(false);
+    setEditTx(null);
+  }, [editTx, updateTransaction]);
+
+  const EXPENSE_CATS = ['Transportation', 'House', 'Office', 'Education', 'Food', 'Entertainment', 'Utilities', 'Other'];
+  const INCOME_CATS = ['Salary / Injection', 'Refund', 'Gift', 'Other'];
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
-      {/* TopAppBar - Neomorphic */}
+      {/* TopAppBar */}
       <View style={[styles.topBar, { backgroundColor: colors.background }]}>
         <View style={styles.topBarLeft}>
           <View style={styles.avatarStack}>
@@ -117,22 +265,24 @@ export default function HomeScreen() {
           <View style={styles.balanceButtons}>
             <TouchableOpacity
               style={[styles.primaryBtn, { backgroundColor: colors.primary }]}
-              onPress={() => setModalVisible(true)}
+              onPress={() => openAddTransaction(false)}
             >
               <Text style={[styles.primaryBtnText, { color: colors.onPrimary }]}>Add Income</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.secondaryBtn, { borderColor: colors.outlineVariant }]}>
+            <TouchableOpacity
+              style={[styles.secondaryBtn, { borderColor: colors.outlineVariant }]}
+              onPress={() => openAddTransaction(true)}
+            >
               <Text style={[styles.secondaryBtnText, { color: colors.primary }]}>Transfer</Text>
             </TouchableOpacity>
           </View>
         </View>
 
-
         {/* Recent Transactions */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={[styles.sectionTitle, { color: colors.onSurface }]}>Recent Transactions</Text>
-            <TouchableOpacity>
+            <TouchableOpacity onPress={() => setViewAllVisible(true)}>
               <Text style={[styles.viewAllText, { color: colors.primary }]}>View All</Text>
             </TouchableOpacity>
           </View>
@@ -145,49 +295,17 @@ export default function HomeScreen() {
             </Text>
           ) : (
             <View style={styles.transactionsList}>
-              {recentTransactions.map((tx, index) => {
-                const isExpense = tx.type === 'expense';
-                const amount = Number(tx.amount);
-                return (
-                  <View
-                    key={tx.id || index}
-                    style={[
-                      styles.transactionItem,
-                      index < recentTransactions.length - 1 && {
-                        borderBottomWidth: 1,
-                        borderBottomColor: colors.outlineVariant,
-                      },
-                    ]}
-                  >
-                    <View style={[styles.txIcon, { backgroundColor: colors.surfaceContainerLow }]}>
-                      <Text style={styles.txIconEmoji}>
-                        {tx.category === 'Transportation' ? '🚗'
-                          : tx.category === 'House' ? '🏠'
-                          : tx.category === 'Office' ? '💼'
-                          : tx.category === 'Education' ? '🎓'
-                          : tx.category === 'Food' ? '🛒'
-                          : tx.category === 'Entertainment' ? '🎬'
-                          : tx.category === 'Utilities' ? '💡'
-                          : isExpense ? '💳' : '💰'}
-                      </Text>
-                    </View>
-                    <View style={styles.txInfo}>
-                      <Text style={[styles.txMemo, { color: colors.onSurface }]}>{tx.memo}</Text>
-                      <Text style={[styles.txDate, { color: colors.onSurfaceVariant }]}>
-                        {tx.category} • {new Date(tx.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.txAmount,
-                        { color: isExpense ? colors.expense : colors.secondary },
-                      ]}
-                    >
-                      {isExpense ? '-' : '+'}${amount.toFixed(2)}
-                    </Text>
-                  </View>
-                );
-              })}
+              {recentTransactions.map((tx, index) => (
+                <TransactionRow
+                  key={tx.id || index}
+                  tx={tx}
+                  index={index}
+                  isLast={index === recentTransactions.length - 1}
+                  colors={colors}
+                  onPress={() => handleTransactionPress(tx)}
+                  onLongPress={() => handleTransactionLongPress(tx)}
+                />
+              ))}
             </View>
           )}
         </View>
@@ -198,7 +316,7 @@ export default function HomeScreen() {
       {/* Floating Action Button */}
       <TouchableOpacity
         style={[styles.fab, { backgroundColor: colors.primary }]}
-        onPress={() => setModalVisible(true)}
+        onPress={() => openAddTransaction(false)}
         activeOpacity={0.8}
       >
         <Text style={styles.fabIcon}>+</Text>
@@ -206,17 +324,107 @@ export default function HomeScreen() {
 
       <AddTransactionModal
         visible={modalVisible}
+        initialTab={modalIncomeTab ? 'income' : undefined}
         onClose={() => setModalVisible(false)}
         onSave={addTransaction}
       />
+
+      {/* View All Transactions Modal */}
+      <Modal visible={viewAllVisible} animationType="slide" transparent>
+        <SafeAreaView style={[styles.modalOverlay, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalTopBar, { backgroundColor: colors.background }]}>
+            <Text style={[styles.modalTitle, { color: colors.onSurface }]}>All Transactions</Text>
+            <TouchableOpacity onPress={() => setViewAllVisible(false)}>
+              <Text style={[styles.modalClose, { color: colors.primary, fontSize: 16 }]}>Close</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.modalListContent} showsVerticalScrollIndicator={false}>
+            {transactions.length === 0 ? (
+              <Text style={[styles.emptyText, { color: colors.onSurfaceVariant }]}>
+                No transactions yet.
+              </Text>
+            ) : (
+              transactions.map((tx, index) => (
+                <TransactionRow
+                  key={tx.id || index}
+                  tx={tx}
+                  index={index}
+                  isLast={index === transactions.length - 1}
+                  colors={colors}
+                  onPress={() => handleTransactionPress(tx)}
+                  onLongPress={() => {
+                    setViewAllVisible(false);
+                    setTimeout(() => handleTransactionLongPress(tx), 300);
+                  }}
+                />
+              ))
+            )}
+            <View style={{ height: 60 }} />
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Edit Transaction Modal */}
+      <Modal visible={editTxVisible} animationType="slide" transparent>
+        <Pressable style={styles.overlay} onPress={() => { setEditTxVisible(false); setEditTx(null); }}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={styles.keyboardContainer}>
+            <Pressable style={[styles.editModalContainer, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.dragBar, { backgroundColor: colors.outlineVariant }]} />
+              <Text style={[styles.modalTitle, { color: colors.onSurface }]}>Edit Transaction</Text>
+
+              {editTx && (
+                <>
+                  <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Amount</Text>
+                  <TextInput
+                    style={[styles.editInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
+                    keyboardType="decimal-pad"
+                    value={editTx.amount}
+                    onChangeText={(t) => setEditTx((prev) => prev ? { ...prev, amount: t } : null)}
+                  />
+
+                  <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Memo</Text>
+                  <TextInput
+                    style={[styles.editInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
+                    value={editTx.memo}
+                    onChangeText={(t) => setEditTx((prev) => prev ? { ...prev, memo: t } : null)}
+                    maxLength={50}
+                  />
+
+                  <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Category</Text>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.catScroll}>
+                    <View style={styles.catRow}>
+                      {(editTx.type === 'expense' ? EXPENSE_CATS : INCOME_CATS).map((cat) => (
+                        <TouchableOpacity
+                          key={cat}
+                          style={[styles.catChip, { borderColor: colors.outlineVariant }, editTx.category === cat && { backgroundColor: colors.primaryLight, borderColor: colors.primary }]}
+                          onPress={() => setEditTx((prev) => prev ? { ...prev, category: cat } : null)}
+                        >
+                          <Text style={[styles.catChipText, { color: editTx.category === cat ? colors.primary : colors.onSurface }]}>
+                            {cat}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                  </ScrollView>
+
+                  <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleEditSave}>
+                    <Text style={[styles.btnLabel, { color: colors.onPrimary }]}>Save Changes</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={[styles.cancelBtn, { borderColor: colors.outlineVariant }]} onPress={() => { setEditTxVisible(false); setEditTx(null); }}>
+                    <Text style={[styles.cancelLabel, { color: colors.onSurfaceVariant }]}>Cancel</Text>
+                  </TouchableOpacity>
+                </>
+              )}
+            </Pressable>
+          </KeyboardAvoidingView>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
+  container: { flex: 1 },
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -229,226 +437,92 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
-  topBarLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  avatarStack: {
-    position: 'relative',
-    width: 40,
-    height: 40,
-  },
+  topBarLeft: { flexDirection: 'row', alignItems: 'center' },
+  avatarStack: { position: 'relative', width: 40, height: 40 },
   avatar: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    borderWidth: 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#EEE5FF',
+    width: 36, height: 36, borderRadius: 18, borderWidth: 2,
+    alignItems: 'center', justifyContent: 'center', backgroundColor: '#EEE5FF',
   },
-  avatarText: {
-    fontSize: 16,
-    fontWeight: '700',
-  },
-  topBarTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    fontFamily: 'Montserrat',
-    letterSpacing: -0.02,
-  },
-  settingsBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  settingsIcon: {
-    fontSize: 22,
-  },
-  scrollContent: {
-    paddingHorizontal: 24,
-    paddingTop: 24,
-  },
-  card: {
-    padding: 16,
-    borderRadius: BorderRadius.lg,
-  },
-  errorText: {
-    fontSize: 13,
-    fontWeight: '500',
-    textAlign: 'center',
-  },
+  avatarText: { fontSize: 16, fontWeight: '700' },
+  topBarTitle: { fontSize: 20, fontWeight: '700', fontFamily: 'Montserrat', letterSpacing: -0.02 },
+  settingsBtn: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  settingsIcon: { fontSize: 22 },
+  scrollContent: { paddingHorizontal: 24, paddingTop: 24 },
+  card: { padding: 16, borderRadius: BorderRadius.lg },
+  errorText: { fontSize: 13, fontWeight: '500', textAlign: 'center' },
 
   // Balance Card
   balanceCard: {
-    borderRadius: 32,
-    padding: 32,
-    alignItems: 'center',
-    marginBottom: 28,
-    // Neomorphic extruded
-    shadowColor: '#D1D9E6',
-    shadowOffset: { width: 8, height: 8 },
-    shadowOpacity: 0.4,
-    shadowRadius: 16,
-    elevation: 8,
+    borderRadius: 32, padding: 32, alignItems: 'center', marginBottom: 28,
+    shadowColor: '#D1D9E6', shadowOffset: { width: 8, height: 8 },
+    shadowOpacity: 0.4, shadowRadius: 16, elevation: 8,
   },
-  balanceLabel: {
-    fontSize: 12,
-    fontWeight: '600',
-    letterSpacing: 0.04,
-    marginBottom: 8,
-    textTransform: 'uppercase',
-  },
-  balanceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    marginBottom: 24,
-  },
-  balanceCurrency: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: '#9F402D',
-    fontFamily: 'Montserrat',
-  },
-  balanceWhole: {
-    fontSize: 48,
-    fontWeight: '700',
-    color: '#9F402D',
-    fontFamily: 'Montserrat',
-    lineHeight: 56,
-    letterSpacing: -0.02,
-  },
-  balanceDecimal: {
-    fontSize: 20,
-    fontWeight: '600',
-    color: '#E2725B',
-    fontFamily: 'Montserrat',
-  },
-  balanceButtons: {
-    flexDirection: 'row',
-    gap: 16,
-    width: '100%',
-  },
+  balanceLabel: { fontSize: 12, fontWeight: '600', letterSpacing: 0.04, marginBottom: 8, textTransform: 'uppercase' },
+  balanceRow: { flexDirection: 'row', alignItems: 'baseline', marginBottom: 24 },
+  balanceCurrency: { fontSize: 28, fontWeight: '700', color: '#9F402D', fontFamily: 'Montserrat' },
+  balanceWhole: { fontSize: 48, fontWeight: '700', color: '#9F402D', fontFamily: 'Montserrat', lineHeight: 56, letterSpacing: -0.02 },
+  balanceDecimal: { fontSize: 20, fontWeight: '600', color: '#E2725B', fontFamily: 'Montserrat' },
+  balanceButtons: { flexDirection: 'row', gap: 16, width: '100%' },
   primaryBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#9F402D',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#9F402D', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
-  primaryBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  secondaryBtn: {
-    flex: 1,
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
-  secondaryBtnText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  primaryBtnText: { fontSize: 14, fontWeight: '600' },
+  secondaryBtn: { flex: 1, paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
+  secondaryBtnText: { fontSize: 14, fontWeight: '600' },
 
   // Section
-  section: {
-    marginBottom: 24,
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 16,
-  },
-  sectionTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    fontFamily: 'Montserrat',
-  },
-  viewAllText: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
+  section: { marginBottom: 24 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 16 },
+  sectionTitle: { fontSize: 20, fontWeight: '700', fontFamily: 'Montserrat' },
+  viewAllText: { fontSize: 14, fontWeight: '600' },
 
   // Transactions
-  transactionsList: {
-    borderRadius: 20,
-    overflow: 'hidden',
-  },
-  transactionItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 14,
-    gap: 12,
-  },
-  txIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
-    alignItems: 'center',
-    justifyContent: 'center',
-    // Extruded
-    shadowColor: '#D1D9E6',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  txIconEmoji: {
-    fontSize: 20,
-  },
-  txInfo: {
-    flex: 1,
-  },
-  txMemo: {
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  txDate: {
-    fontSize: 12,
-    fontWeight: '500',
-    marginTop: 2,
-  },
-  txAmount: {
-    fontSize: 15,
-    fontWeight: '700',
-  },
-  emptyText: {
-    fontSize: 14,
-    textAlign: 'center',
-    paddingVertical: 20,
-  },
+  transactionsList: { borderRadius: 20, overflow: 'hidden' },
+  transactionItem: { flexDirection: 'row', alignItems: 'center', paddingVertical: 14, gap: 12 },
+  txIcon: { width: 48, height: 48, borderRadius: 16, alignItems: 'center', justifyContent: 'center', shadowColor: '#D1D9E6', shadowOffset: { width: 2, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 2 },
+  txIconEmoji: { fontSize: 20 },
+  txInfo: { flex: 1 },
+  txMemo: { fontSize: 15, fontWeight: '600' },
+  txDate: { fontSize: 12, fontWeight: '500', marginTop: 2 },
+  txAmount: { fontSize: 15, fontWeight: '700' },
+  emptyText: { fontSize: 14, textAlign: 'center', paddingVertical: 20 },
 
   // FAB
   fab: {
-    position: 'absolute',
-    bottom: 90,
-    right: 24,
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#9F402D',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.35,
-    shadowRadius: 10,
-    elevation: 6,
+    position: 'absolute', bottom: 90, right: 24, width: 60, height: 60, borderRadius: 30,
+    alignItems: 'center', justifyContent: 'center',
+    shadowColor: '#9F402D', shadowOffset: { width: 0, height: 6 }, shadowOpacity: 0.35, shadowRadius: 10, elevation: 6,
   },
-  fabIcon: {
-    color: '#FFFFFF',
-    fontSize: 32,
-    fontWeight: 'bold',
-    lineHeight: 34,
+  fabIcon: { color: '#FFFFFF', fontSize: 32, fontWeight: 'bold', lineHeight: 34 },
+
+  // View All Modal
+  modalOverlay: { flex: 1 },
+  modalTopBar: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 24, paddingVertical: 16,
+    shadowColor: '#D1D9E6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
+  modalTitle: { fontSize: 18, fontWeight: '700', fontFamily: 'Montserrat' },
+  modalClose: { fontWeight: '600' },
+  modalListContent: { padding: 24 },
+
+  // Edit Modal
+  overlay: { flex: 1, backgroundColor: 'rgba(0, 0, 0, 0.5)', justifyContent: 'flex-end' },
+  keyboardContainer: { width: '100%' },
+  editModalContainer: {
+    borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24,
+    shadowColor: '#D1D9E6', shadowOffset: { width: -4, height: -4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 8,
+  },
+  dragBar: { width: 40, height: 5, borderRadius: 3, alignSelf: 'center', marginBottom: 16 },
+  label: { fontSize: 13, fontWeight: '600', marginBottom: 8, marginTop: 12 },
+  editInput: { borderWidth: 1, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16 },
+  catScroll: { marginTop: 8, marginBottom: 16 },
+  catRow: { flexDirection: 'row', gap: 8, paddingVertical: 4 },
+  catChip: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, borderWidth: 1 },
+  catChipText: { fontSize: 13, fontWeight: '600' },
+  saveBtn: { paddingVertical: 16, borderRadius: 14, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+  btnLabel: { fontSize: 16, fontWeight: '700' },
+  cancelBtn: { paddingVertical: 14, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginTop: 8 },
+  cancelLabel: { fontSize: 14, fontWeight: '600' },
 });

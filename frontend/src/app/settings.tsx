@@ -14,6 +14,36 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { Colors, Spacing, BorderRadius } from '../constants/theme';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const CATEGORY_BUDGETS_KEY = '@ourfinances_category_budgets';
+
+const DEFAULT_BUDGETS: Record<string, string> = {
+  Transportation: '1000',
+  House: '1000',
+  Office: '500',
+  Education: '800',
+  Food: '600',
+  Utilities: '400',
+  Entertainment: '300',
+  Other: '500',
+};
+
+function loadBudgets(): Promise<Record<string, string>> {
+  return AsyncStorage.getItem(CATEGORY_BUDGETS_KEY).then((data) => {
+    if (data) {
+      const parsed = JSON.parse(data);
+      // Merge with defaults in case new categories were added
+      const merged = { ...DEFAULT_BUDGETS, ...parsed };
+      return merged;
+    }
+    return { ...DEFAULT_BUDGETS };
+  }).catch(() => ({ ...DEFAULT_BUDGETS }));
+}
+
+function saveBudgets(budgets: Record<string, string>): Promise<void> {
+  return AsyncStorage.setItem(CATEGORY_BUDGETS_KEY, JSON.stringify(budgets));
+}
 
 export default function SettingsScreen() {
   const scheme = useColorScheme();
@@ -35,6 +65,8 @@ export default function SettingsScreen() {
   const [limit, setLimit] = useState(budget?.monthly_limit.toString() || '2000');
   const [linkError, setLinkError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [categoryBudgets, setCategoryBudgets] = useState<Record<string, string>>({});
+  const [budgetsLoaded, setBudgetsLoaded] = useState(false);
 
   // Update check state
   const [updateState, setUpdateState] = useState<
@@ -43,8 +75,15 @@ export default function SettingsScreen() {
 
   const isElectron = !!(Platform.OS === 'web' && (window as any).electronAPI);
 
-  // Only show update-check results when the user explicitly pressed the button
   const userInitiated = useRef(false);
+
+  // Load category budgets on mount
+  useEffect(() => {
+    loadBudgets().then((b) => {
+      setCategoryBudgets(b);
+      setBudgetsLoaded(true);
+    });
+  }, []);
 
   // Listen for update events from the main process
   useEffect(() => {
@@ -84,7 +123,6 @@ export default function SettingsScreen() {
   }, []);
 
   // Check if user has a linked (shared) group
-  // A group is "linked" if more than one profile shares it
   const isLinked = (budget?.profiles_count ?? 1) > 1;
 
   const handleGenerateCode = async () => {
@@ -153,6 +191,15 @@ export default function SettingsScreen() {
     }
   };
 
+  const handleCategoryBudgetChange = useCallback((cat: string, value: string) => {
+    setCategoryBudgets((prev) => ({ ...prev, [cat]: value }));
+  }, []);
+
+  const handleSaveCategoryBudgets = useCallback(async () => {
+    await saveBudgets(categoryBudgets);
+    setSuccessMsg('Category budgets saved!');
+  }, [categoryBudgets]);
+
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: colors.background }]} edges={[]}>
       <View style={[styles.topBar, { backgroundColor: colors.background }]}>
@@ -167,7 +214,7 @@ export default function SettingsScreen() {
           </View>
         )}
 
-        {/* Profile Card - Neomorphic */}
+        {/* Profile Card */}
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Account</Text>
           <View style={styles.profileRow}>
@@ -217,14 +264,10 @@ export default function SettingsScreen() {
 
               {linkError && <Text style={styles.errorText}>{linkError}</Text>}
 
-              {/* Enter partner code */}
               <Text style={[styles.subLabel, { color: colors.onSurface }]}>Have a code? Enter it here:</Text>
               <View style={styles.rowInput}>
                 <TextInput
-                  style={[
-                    styles.input,
-                    { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow },
-                  ]}
+                  style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                   placeholder="Enter 6-digit code"
                   placeholderTextColor={colors.onSurfaceVariant}
                   keyboardType="number-pad"
@@ -243,7 +286,6 @@ export default function SettingsScreen() {
 
               <View style={[styles.divider, { backgroundColor: colors.outlineVariant }]} />
 
-              {/* Generate code */}
               <Text style={[styles.subLabel, { color: colors.onSurface }]}>Or generate your own code to share:</Text>
               {partnerCode ? (
                 <View style={[styles.codeCard, { backgroundColor: colors.surfaceContainerLow }]}>
@@ -270,7 +312,7 @@ export default function SettingsScreen() {
           )}
         </View>
 
-        {/* Budget Settings */}
+        {/* Monthly Budget */}
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Monthly Budget</Text>
           <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
@@ -278,10 +320,7 @@ export default function SettingsScreen() {
           </Text>
           <View style={styles.rowInput}>
             <TextInput
-              style={[
-                styles.input,
-                { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow },
-              ]}
+              style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
               placeholder="Budget Limit"
               placeholderTextColor={colors.onSurfaceVariant}
               keyboardType="numeric"
@@ -297,72 +336,76 @@ export default function SettingsScreen() {
           </View>
         </View>
 
+        {/* Category Budgets */}
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Category Budgets</Text>
+          <Text style={[styles.description, { color: colors.onSurfaceVariant }]}>
+            Set monthly spending limits per category. These appear in the Ledger to help you stay on track.
+          </Text>
+          {budgetsLoaded && (
+            <>
+              {Object.entries(DEFAULT_BUDGETS).map(([cat, _default]) => (
+                <View key={cat} style={styles.catBudgetRow}>
+                  <Text style={[styles.catBudgetLabel, { color: colors.onSurface }]}>{cat}</Text>
+                  <View style={styles.catBudgetInputRow}>
+                    <Text style={[styles.catBudgetDollar, { color: colors.onSurfaceVariant }]}>$</Text>
+                    <TextInput
+                      style={[styles.catBudgetInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
+                      keyboardType="numeric"
+                      value={categoryBudgets[cat] || _default}
+                      onChangeText={(t) => handleCategoryBudgetChange(cat, t)}
+                    />
+                  </View>
+                </View>
+              ))}
+              <TouchableOpacity
+                style={[styles.saveBudgetsBtn, { backgroundColor: colors.primary }]}
+                onPress={handleSaveCategoryBudgets}
+              >
+                <Text style={styles.btnText}>Save Category Budgets</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+
         {/* App Info — Updates */}
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <Text style={[styles.cardTitle, { color: colors.onSurface }]}>App Info</Text>
 
           <View style={styles.versionRow}>
             <Text style={[styles.versionLabel, { color: colors.onSurfaceVariant }]}>Version</Text>
-            <Text style={[styles.versionValue, { color: colors.onSurface }]}>2.1.0</Text>
+            <Text style={[styles.versionValue, { color: colors.onSurface }]}>2.2.0</Text>
           </View>
 
           {isElectron ? (
             <>
               <TouchableOpacity
-                style={[
-                  styles.checkUpdatesBtn,
-                  {
-                    backgroundColor:
-                      updateState.status === 'checking' ? colors.surfaceContainerLow : colors.primary,
-                    borderColor: colors.primary,
-                  },
-                ]}
+                style={[styles.checkUpdatesBtn, { backgroundColor: updateState.status === 'checking' ? colors.surfaceContainerLow : colors.primary, borderColor: colors.primary }]}
                 onPress={handleCheckUpdates}
                 disabled={updateState.status === 'checking'}
               >
-                <Text
-                  style={[
-                    styles.checkUpdatesText,
-                    {
-                      color:
-                        updateState.status === 'checking' ? colors.onSurfaceVariant : '#FFFFFF',
-                    },
-                  ]}
-                >
-                  {updateState.status === 'checking'
-                    ? 'Checking for updates…'
-                    : 'Check for Updates'}
+                <Text style={[styles.checkUpdatesText, { color: updateState.status === 'checking' ? colors.onSurfaceVariant : '#FFFFFF' }]}>
+                  {updateState.status === 'checking' ? 'Checking for updates…' : 'Check for Updates'}
                 </Text>
               </TouchableOpacity>
-
               {updateState.status === 'uptodate' && (
                 <View style={styles.updateStatusRow}>
                   <Text style={styles.upToDateEmoji}>✅</Text>
-                  <Text style={[styles.updateStatusText, { color: colors.income }]}>
-                    {updateState.message}
-                  </Text>
+                  <Text style={[styles.updateStatusText, { color: colors.income }]}>{updateState.message}</Text>
                 </View>
               )}
-
               {updateState.status === 'error' && (
                 <View style={styles.updateStatusRow}>
                   <Text style={styles.upToDateEmoji}>⚠️</Text>
-                  <Text style={[styles.updateStatusText, { color: '#BA1A1A' }]} numberOfLines={2}>
-                    Update check failed: {updateState.message}
-                  </Text>
+                  <Text style={[styles.updateStatusText, { color: '#BA1A1A' }]} numberOfLines={2}>Update check failed: {updateState.message}</Text>
                 </View>
               )}
-
               {updateState.status === 'available' && (
-                <Text style={[styles.updateHint, { color: colors.onSurfaceVariant }]}>
-                  An update is available — see the banner at the top of the screen to download.
-                </Text>
+                <Text style={[styles.updateHint, { color: colors.onSurfaceVariant }]}>An update is available — see the banner at the top of the screen to download.</Text>
               )}
             </>
           ) : (
-            <Text style={[styles.updateHint, { color: colors.onSurfaceVariant }]}>
-              Updates are handled automatically through your device's app store.
-            </Text>
+            <Text style={[styles.updateHint, { color: colors.onSurfaceVariant }]}>Updates are handled automatically through your device's app store.</Text>
           )}
         </View>
 
@@ -380,35 +423,18 @@ export default function SettingsScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   topBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 16,
-    shadowColor: '#D1D9E6',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 4,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+    paddingHorizontal: 24, paddingVertical: 16,
+    shadowColor: '#D1D9E6', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   title: { fontSize: 20, fontWeight: '700', fontFamily: 'Montserrat' },
   scrollContent: { padding: 24, gap: 16 },
   card: {
-    padding: 20,
-    borderRadius: 20,
-    marginBottom: 16,
-    shadowColor: '#D1D9E6',
-    shadowOffset: { width: 4, height: 4 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 4,
+    padding: 20, borderRadius: 20, marginBottom: 16,
+    shadowColor: '#D1D9E6', shadowOffset: { width: 4, height: 4 }, shadowOpacity: 0.2, shadowRadius: 8, elevation: 4,
   },
   cardTitle: { fontSize: 16, fontWeight: '700', fontFamily: 'Montserrat', marginBottom: 16 },
-  messageCard: {
-    padding: 16,
-    borderRadius: 12,
-    marginBottom: 16,
-  },
+  messageCard: { padding: 16, borderRadius: 12, marginBottom: 16 },
   successText: { fontSize: 13, fontWeight: '600', textAlign: 'center' },
   profileRow: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   avatar: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
@@ -426,13 +452,8 @@ const styles = StyleSheet.create({
   btnOutline: { borderWidth: 1, borderRadius: 12, paddingVertical: 14, alignItems: 'center', justifyContent: 'center', marginBottom: 12 },
   btnOutlineText: { fontSize: 14, fontWeight: '700' },
   codeCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: 16,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#DDC0BA',
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    padding: 16, borderRadius: 12, borderWidth: 1, borderColor: '#DDC0BA',
   },
   codeText: { fontSize: 24, fontWeight: '700', letterSpacing: 2 },
   btnSmall: { paddingVertical: 8, paddingHorizontal: 20, borderRadius: 8 },
@@ -444,34 +465,26 @@ const styles = StyleSheet.create({
   linkedSubtext: { fontSize: 13, marginTop: 2 },
   logoutBtn: { borderWidth: 1, borderRadius: 16, paddingVertical: 16, alignItems: 'center', justifyContent: 'center', marginTop: 20, marginBottom: 40 },
   logoutBtnText: { fontSize: 15, fontWeight: '700' },
-
-  // App Info
-  versionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
+  versionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
   versionLabel: { fontSize: 14, fontWeight: '500' },
   versionValue: { fontSize: 14, fontWeight: '700' },
-  checkUpdatesBtn: {
-    width: '100%',
-    paddingVertical: 14,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-  },
+  checkUpdatesBtn: { width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', borderWidth: 1 },
   checkUpdatesText: { fontSize: 14, fontWeight: '700' },
-  updateStatusRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 16,
-  },
+  updateStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16 },
   upToDateEmoji: { fontSize: 16 },
   updateStatusText: { fontSize: 13, fontWeight: '600', flex: 1 },
   updateHint: { fontSize: 12, fontWeight: '500', marginTop: 12, lineHeight: 16 },
   disconnectBtn: { borderWidth: 1, borderRadius: 12, paddingVertical: 12, alignItems: 'center', justifyContent: 'center', marginTop: 16 },
   disconnectBtnText: { fontSize: 14, fontWeight: '700' },
+
+  // Category Budgets
+  catBudgetRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    marginBottom: 12, gap: 12,
+  },
+  catBudgetLabel: { fontSize: 14, fontWeight: '600', flex: 1 },
+  catBudgetInputRow: { flexDirection: 'row', alignItems: 'center', gap: 4, width: 120 },
+  catBudgetDollar: { fontSize: 15, fontWeight: '500' },
+  catBudgetInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontWeight: '600', textAlign: 'right', flex: 1 },
+  saveBudgetsBtn: { width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
 });

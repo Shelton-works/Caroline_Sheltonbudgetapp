@@ -18,6 +18,7 @@ interface AddTransactionModalProps {
   visible: boolean;
   onClose: () => void;
   onSave: (amount: number, type: 'expense' | 'income', category: string, memo: string) => Promise<void>;
+  initialTab?: 'expense' | 'income';
 }
 
 const EXPENSE_CATEGORIES = ['Transportation', 'House', 'Office', 'Education', 'Food', 'Entertainment', 'Utilities', 'Other'];
@@ -27,11 +28,12 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
   visible,
   onClose,
   onSave,
+  initialTab = 'expense',
 }) => {
   const scheme = useColorScheme();
   const colors = Colors[scheme === 'dark' ? 'dark' : 'light'];
 
-  const [activeTab, setActiveTab] = useState<'expense' | 'income'>('expense');
+  const [activeTab, setActiveTab] = useState<'expense' | 'income'>(initialTab);
   const [amount, setAmount] = useState('');
   const [memo, setMemo] = useState('');
   const [category, setCategory] = useState(EXPENSE_CATEGORIES[0]);
