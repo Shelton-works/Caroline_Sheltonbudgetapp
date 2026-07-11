@@ -1,0 +1,324 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Version tag (e.g. v2.2.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  # ── EXE Build (Windows) ──────────────────────────────────────────────
+  build-exe:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Install electron dependencies
+        working-directory: frontend/electron
+        run: npm ci
+
+      - name: Export Expo web (critical — must run before electron-builder)
+        working-directory: frontend
+        env:
+          EXPO_PUBLIC_API_URL: https://caroline-sheltonbudgetapp.onrender.com
+        run: npx expo export --platform web
+
+      - name: Verify web export includes index.html
+        working-directory: frontend
+        run: |
+          if (!(Test-Path dist/index.html)) {
+            Write-Error "dist/index.html missing — web export failed"
+            exit 1
+          }
+          Write-Host "Web export verified: dist/index.html exists"
+
+      - name: Build Windows EXE (installer + portable)
+        working-directory: frontend/electron
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npx electron-builder build --win --publish never
+
+      - name: Compute EXE checksums
+        id: checksums
+        working-directory: frontend/electron/dist
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem "Our-Finances-Setup-*.exe" | Select-Object -First 1
+          $portable  = Get-ChildItem "Our-Finances-*.exe" -Exclude "Our-Finances-Setup-*" | Select-Object -First 1
+
+          $installerHash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLower()
+          $portableHash  = (Get-FileHash $portable.FullName -Algorithm SHA256).Hash.ToLower()
+
+          Write-Host "Installer: $($installer.Name) ($($installer.Length) bytes) — $installerHash"
+          Write-Host "Portable:  $($portable.Name) ($($portable.Length) bytes) — $portableHash"
+
+          "installer_name=$($installer.Name)" >> $env:GITHUB_OUTPUT
+          "installer_size=$($installer.Length)" >> $env:GITHUB_OUTPUT
+          "installer_hash=$installerHash" >> $env:GITHUB_OUTPUT
+          "portable_name=$($portable.Name)" >> $env:GITHUB_OUTPUT
+          "portable_size=$($portable.Length)" >> $env:GITHUB_OUTPUT
+          "portable_hash=$portableHash" >> $env:GITHUB_OUTPUT
+
+      - name: Upload EXE artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe-builds
+          path: |
+            frontend/electron/dist/Our-Finances-Setup-*.exe
+            frontend/electron/dist/Our-Finances-2*.exe
+          retention-days: 5
+
+      - name: Upload latest.yml + blockmap
+        uses: actions/upload-artifact@v4
+        with:
+          name: exe-metadata
+          path: |
+            frontend/electron/dist/latest.yml
+            frontend/electron/dist/*.blockmap
+          retention-days: 5
+
+      - name: Output checksums
+        run: |
+          echo "=== EXE Build Complete ==="
+          echo "Installer: ${{ steps.checksums.outputs.installer_name }}"
+          echo "Portable:  ${{ steps.checksums.outputs.portable_name }}"
+
+    outputs:
+      installer_name: ${{ steps.checksums.outputs.installer_name }}
+      installer_hash: ${{ steps.checksums.outputs.installer_hash }}
+      installer_size: ${{ steps.checksums.outputs.installer_size }}
+      portable_name: ${{ steps.checksums.outputs.portable_name }}
+      portable_hash: ${{ steps.checksums.outputs.portable_hash }}
+      portable_size: ${{ steps.checksums.outputs.portable_size }}
+
+  # ── APK Build (Windows + Android SDK) ────────────────────────────────
+  build-apk:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        working-directory: frontend
+        run: npm ci
+
+      - name: Expo prebuild (clean)
+        working-directory: frontend
+        env:
+          EXPO_PUBLIC_API_URL: https://caroline-sheltonbudgetapp.onrender.com
+          EXPO_PUBLIC_BACKEND_SECRET: ${{ secrets.EXPO_PUBLIC_BACKEND_SECRET }}
+        run: npx expo prebuild --platform android --clean
+
+      - name: Sync version from app.json to build.gradle (after prebuild)
+        working-directory: frontend
+        shell: pwsh
+        run: |
+          # Read version from app.json
+          $appJson = Get-Content app.json | ConvertFrom-Json
+          $version = $appJson.expo.version
+          Write-Host "Version from app.json: $version"
+
+          # Calculate versionCode from version string (e.g. 2.2.0 → 20200)
+          $parts = $version.Split('.')
+          $major = [int]$parts[0]
+          $minor = [int]$parts[1]
+          $patch = [int]$parts[2]
+          $versionCode = ($major * 10000) + ($minor * 100) + $patch
+          Write-Host "Computed versionCode: $versionCode"
+
+          # Update build.gradle (must be AFTER prebuild which regenerates android/)
+          $gradlePath = "android/app/build.gradle"
+          $content = Get-Content $gradlePath -Raw
+          $content = $content -replace 'versionName\s+"[^"]*"', "versionName `"$version`""
+          $content = $content -replace 'versionCode\s+\d+', "versionCode $versionCode"
+          Set-Content $gradlePath -Value $content -NoNewline
+
+          # Verify
+          $updated = Get-Content $gradlePath | Select-String 'versionName|versionCode'
+          $updated | ForEach-Object { Write-Host $_.Line.Trim() }
+
+      - name: Build APK
+        working-directory: frontend/android
+        run: ./gradlew assembleRelease --no-daemon
+
+      - name: Verify APK exists
+        working-directory: frontend/android
+        run: |
+          if (!(Test-Path app/build/outputs/apk/release/app-release.apk)) {
+            Write-Error "APK not found at expected path"
+            exit 1
+          }
+
+      - name: Compute APK checksum
+        id: apk-checksum
+        working-directory: frontend/android
+        shell: pwsh
+        run: |
+          $apk = Get-ChildItem "app/build/outputs/apk/release/app-release.apk"
+          $hash = (Get-FileHash $apk.FullName -Algorithm SHA256).Hash.ToLower()
+          Write-Host "APK: $($apk.Name) ($($apk.Length) bytes) — $hash"
+          "apk_hash=$hash" >> $env:GITHUB_OUTPUT
+          "apk_size=$($apk.Length)" >> $env:GITHUB_OUTPUT
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-build
+          path: frontend/android/app/build/outputs/apk/release/app-release.apk
+          retention-days: 5
+
+    outputs:
+      apk_hash: ${{ steps.apk-checksum.outputs.apk_hash }}
+      apk_size: ${{ steps.apk-checksum.outputs.apk_size }}
+
+  # ── Publish Release ───────────────────────────────────────────────────
+  publish-release:
+    needs: [build-exe, build-apk]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Determine version tag
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            TAG="${{ github.event.inputs.tag }}"
+          else
+            TAG="${GITHUB_REF#refs/tags/}"
+          fi
+          echo "tag=$TAG" >> $GITHUB_OUTPUT
+          VERSION="${TAG#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Releasing: $TAG (version $VERSION)"
+
+      - name: Download EXE builds
+        uses: actions/download-artifact@v4
+        with:
+          name: exe-builds
+          path: release-assets
+
+      - name: Download EXE metadata
+        uses: actions/download-artifact@v4
+        with:
+          name: exe-metadata
+          path: release-assets
+
+      - name: Download APK
+        uses: actions/download-artifact@v4
+        with:
+          name: apk-build
+          path: release-assets
+
+      - name: Rename APK
+        working-directory: release-assets
+        run: mv app-release.apk "Our.Finances.${{ steps.version.outputs.version }}.apk"
+
+      - name: Update version.json
+        working-directory: website
+        shell: bash
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          APK_SIZE="${{ needs.build-apk.outputs.apk_size }}"
+          EXE_SIZE="${{ needs.build-exe.outputs.installer_size }}"
+          APK_HASH="${{ needs.build-apk.outputs.apk_hash }}"
+          EXE_HASH="${{ needs.build-exe.outputs.installer_hash }}"
+          EXE_NAME="${{ needs.build-exe.outputs.installer_name }}"
+          TODAY=$(date -u +"%Y-%m-%d")
+
+          cat > version.json <<EOF
+          {
+            "version": "$VERSION",
+            "release_date": "$TODAY",
+            "changelog": "See https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v$VERSION",
+            "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v$VERSION/Our.Finances.$VERSION.apk",
+            "download_url_windows": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v$VERSION/$EXE_NAME",
+            "apk_file_size": $APK_SIZE,
+            "apk_checksum_sha256": "$APK_HASH",
+            "windows_file_size": $EXE_SIZE,
+            "windows_checksum_sha256": "$EXE_HASH"
+          }
+          EOF
+
+          echo "Updated version.json:"
+          cat version.json
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "v${{ steps.version.outputs.version }}"
+          body: |
+            ## Our Finances v${{ steps.version.outputs.version }}
+
+            ### Downloads
+            - **Windows Installer:** ${{ needs.build-exe.outputs.installer_name }}
+            - **Windows Portable:** ${{ needs.build-exe.outputs.portable_name }}
+            - **Android APK:** Our.Finances.${{ steps.version.outputs.version }}.apk
+
+            ### Checksums (SHA-256)
+            ```
+            Installer: ${{ needs.build-exe.outputs.installer_hash }}
+            Portable:  ${{ needs.build-exe.outputs.portable_hash }}
+            APK:       ${{ needs.build-apk.outputs.apk_hash }}
+            ```
+
+            [Full changelog](https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v${{ steps.version.outputs.version }})
+          files: release-assets/*
+          fail_on_unmatched_files: true
+
+      - name: Commit version.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add website/version.json
+          git diff --cached --quiet || git commit -m "Update version.json for v${{ steps.version.outputs.version }}"
+          git push origin main
+
+      - name: Summary
+        run: |
+          echo "## ✅ Release Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Asset | Size | SHA-256 |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|------|---------|" >> $GITHUB_STEP_SUMMARY
+          echo "| ${{ needs.build-exe.outputs.installer_name }} | ${{ needs.build-exe.outputs.installer_size }} bytes | \`${{ needs.build-exe.outputs.installer_hash }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| ${{ needs.build-exe.outputs.portable_name }} | ${{ needs.build-exe.outputs.portable_size }} bytes | \`${{ needs.build-exe.outputs.portable_hash }}\` |" >> $GITHUB_STEP_SUMMARY
+          echo "| Our.Finances.${{ steps.version.outputs.version }}.apk | ${{ needs.build-apk.outputs.apk_size }} bytes | \`${{ needs.build-apk.outputs.apk_hash }}\` |" >> $GITHUB_STEP_SUMMARY
