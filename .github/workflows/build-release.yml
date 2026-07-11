@@ -252,6 +252,14 @@ jobs:
         working-directory: release-assets
         run: mv app-release.apk "Our.Finances.${{ steps.version.outputs.version }}.apk"
 
+      - name: Set release notes
+        id: notes
+        run: |
+          NOTES="v${{ steps.version.outputs.version }} — Cross-device sync fix, savings input fix, and partner connection debug info"
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
       - name: Update version.json
         working-directory: website
         shell: bash
@@ -262,19 +270,30 @@ jobs:
           APK_HASH="${{ needs.build-apk.outputs.apk_hash }}"
           EXE_HASH="${{ needs.build-exe.outputs.installer_hash }}"
           EXE_NAME="${{ needs.build-exe.outputs.installer_name }}"
+          TAG="v$VERSION"
           TODAY=$(date -u +"%Y-%m-%d")
+          REPO="https://github.com/Shelton-works/Caroline_Sheltonbudgetapp"
+          NOTES="${{ steps.notes.outputs.notes }}"
 
           cat > version.json <<EOF
           {
             "version": "$VERSION",
+            "release_notes": "$NOTES",
             "release_date": "$TODAY",
-            "changelog": "See https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v$VERSION",
-            "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v$VERSION/Our.Finances.$VERSION.apk",
-            "download_url_windows": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v$VERSION/$EXE_NAME",
-            "apk_file_size": $APK_SIZE,
-            "apk_checksum_sha256": "$APK_HASH",
-            "windows_file_size": $EXE_SIZE,
-            "windows_checksum_sha256": "$EXE_HASH"
+            "platforms": {
+              "windows": {
+                "download_url": "$REPO/releases/download/$TAG/$EXE_NAME",
+                "checksum_sha256": "$EXE_HASH",
+                "minimum_version": "1.0.0",
+                "github_release": "$REPO/releases/tag/$TAG"
+              },
+              "android": {
+                "download_url": "$REPO/releases/download/$TAG/Our.Finances.$VERSION.apk",
+                "checksum_sha256": "$APK_HASH",
+                "minimum_version": "1.0.0",
+                "github_release": "$REPO/releases/tag/$TAG"
+              }
+            }
           }
           EOF
 

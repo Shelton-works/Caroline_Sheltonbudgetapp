@@ -137,6 +137,7 @@ export default function HomeScreen() {
     addTransaction,
     updateTransaction,
     deleteTransaction,
+    lastSyncedAt,
   } = useBudgetStore();
 
   const [modalVisible, setModalVisible] = useState(false);
@@ -155,6 +156,12 @@ export default function HomeScreen() {
 
   const fluidBalance = budget?.fluid_balance ?? 0;
   const recentTransactions = transactions.slice(0, 6);
+  const isLinked = (budget?.profiles_count ?? 1) > 1;
+
+  // Format last synced time
+  const lastSyncedStr = lastSyncedAt
+    ? 'Synced ' + new Date(lastSyncedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })
+    : null;
 
   const openAddTransaction = useCallback((incomeTab = false) => {
     setModalIncomeTab(incomeTab);
@@ -251,6 +258,19 @@ export default function HomeScreen() {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} />
         }
       >
+        {/* Not Linked Warning Banner */}
+        {!isLinked && (
+          <View style={[styles.notLinkedBanner, { backgroundColor: colors.surfaceContainerLow, borderColor: colors.outlineVariant, borderLeftColor: colors.expense }]}>
+            <Text style={styles.notLinkedEmoji}>🔗</Text>
+            <View style={styles.notLinkedContent}>
+              <Text style={[styles.notLinkedTitle, { color: colors.onSurface }]}>Not connected to partner</Text>
+              <Text style={[styles.notLinkedDesc, { color: colors.onSurfaceVariant }]}>
+                Go to Settings → Partner Connection to link budgets with your partner. Data you enter now is only visible to you.
+              </Text>
+            </View>
+          </View>
+        )}
+
         {/* Error Banner */}
         {error && (
           <View style={[styles.card, { backgroundColor: colors.errorContainer, marginBottom: Spacing.three }]}>
@@ -277,6 +297,14 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* Sync indicator */}
+        {lastSyncedStr && (
+          <View style={styles.syncIndicatorRow}>
+            <View style={[styles.syncDot, { backgroundColor: colors.income }]} />
+            <Text style={[styles.syncIndicatorText, { color: colors.onSurfaceVariant }]}>{lastSyncedStr}</Text>
+          </View>
+        )}
 
         {/* Recent Transactions */}
         <View style={styles.section}>
@@ -487,6 +515,22 @@ const styles = StyleSheet.create({
   txDate: { fontSize: 12, fontWeight: '500', marginTop: 2 },
   txAmount: { fontSize: 15, fontWeight: '700' },
   emptyText: { fontSize: 14, textAlign: 'center', paddingVertical: 20 },
+
+  // Not Linked Banner
+  notLinkedBanner: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    padding: 14, borderRadius: 14, marginBottom: 20,
+    borderWidth: 1, borderLeftWidth: 4,
+  },
+  notLinkedEmoji: { fontSize: 16, marginTop: 2 },
+  notLinkedContent: { flex: 1 },
+  notLinkedTitle: { fontSize: 14, fontWeight: '700', marginBottom: 3 },
+  notLinkedDesc: { fontSize: 12, lineHeight: 17 },
+
+  // Sync indicator
+  syncIndicatorRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 12, paddingHorizontal: 4 },
+  syncDot: { width: 7, height: 7, borderRadius: 4 },
+  syncIndicatorText: { fontSize: 11, fontWeight: '500' },
 
   // FAB
   fab: {

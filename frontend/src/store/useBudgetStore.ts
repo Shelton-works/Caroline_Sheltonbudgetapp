@@ -63,6 +63,7 @@ interface BudgetState {
   partnerCode: string | null;
   theme: 'light' | 'dark';
   savingsGoals: SavingsGoal[];
+  lastSyncedAt: Date | null;
 
   // Actions
   init: () => Promise<void>;
@@ -133,6 +134,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
   partnerCode: null,
   theme: 'light',
   savingsGoals: [],
+  lastSyncedAt: null,
 
   init: async () => {
     try {
@@ -175,8 +177,8 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
           const profile = buildProfile(session.user, budget.id);
           await AsyncStorage.setItem(USER_KEY, JSON.stringify(profile));
 
-          // Fetch latest savings from backend
-          get().fetchSavings();
+          // Fetch latest savings from backend (await to prevent stale local data flash)
+          await get().fetchSavings();
 
           set({
             token: session.access_token,
@@ -184,6 +186,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
             transactions,
             budget,
             isLoading: false,
+            lastSyncedAt: new Date(),
           });
 
           // Start background sync polling for cross-device real-time updates
@@ -225,8 +228,8 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       // Persist user profile locally
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(profile));
 
-      // Fetch latest savings from backend
-      get().fetchSavings();
+      // Fetch latest savings from backend (await to prevent stale local data flash)
+      await get().fetchSavings();
 
       set({
         token: session.access_token,
@@ -234,6 +237,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         budget,
         transactions,
         isLoading: false,
+        lastSyncedAt: new Date(),
       });
 
       // Start background sync for cross-device real-time updates
@@ -271,8 +275,8 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       // Persist user profile locally
       await AsyncStorage.setItem(USER_KEY, JSON.stringify(profile));
 
-      // Sync savings from backend
-      get().fetchSavings();
+      // Sync savings from backend (await to prevent stale local data flash)
+      await get().fetchSavings();
 
       set({
         token: session.access_token,
@@ -280,6 +284,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         budget,
         transactions,
         isLoading: false,
+        lastSyncedAt: new Date(),
       });
 
       // Start background sync for cross-device real-time updates
@@ -334,7 +339,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         api.getTransactions(),
         api.getBudget(),
       ]);
-      set({ transactions, budget, isLoading: false });
+      set({ transactions, budget, isLoading: false, lastSyncedAt: new Date() });
     } catch (err: any) {
       set({ error: err.message || 'Failed to fetch data', isLoading: false });
     }
@@ -506,7 +511,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       ]);
 
       // Sync savings for the new group
-      get().fetchSavings();
+      await get().fetchSavings();
 
       const currentUser = get().user;
       const updatedUser = currentUser ? { ...currentUser, group_id: res.group_id } : null;
@@ -522,7 +527,11 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         transactions,
         partnerCode: null,
         isLoading: false,
+        lastSyncedAt: new Date(),
       });
+
+      // Start background sync polling so both partners see each other's changes
+      startSyncPolling();
     } catch (err: any) {
       set({ error: err.message || 'Linking failed', isLoading: false });
       throw err;
@@ -541,7 +550,7 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
       ]);
 
       // Sync savings for the new group
-      get().fetchSavings();
+      await get().fetchSavings();
 
       const currentUser = get().user;
       const updatedUser = currentUser ? { ...currentUser, group_id: res.group_id } : null;
@@ -557,7 +566,11 @@ export const useBudgetStore = create<BudgetState>((set, get) => ({
         transactions,
         partnerCode: null,
         isLoading: false,
+        lastSyncedAt: new Date(),
       });
+
+      // Start background sync polling so both partners see each other's changes
+      startSyncPolling();
     } catch (err: any) {
       set({ error: err.message || 'Failed to disconnect partner', isLoading: false });
       throw err;
@@ -736,6 +749,7 @@ function startSyncPolling() {
         transactions,
         budget,
         savingsGoals,
+        lastSyncedAt: new Date(),
       });
       persistSavings(savingsGoals);
     } catch {

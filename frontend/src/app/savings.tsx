@@ -55,14 +55,17 @@ export default function SavingsScreen() {
     setActiveSection('add');
   }, []);
 
-  // New goal creation modal state
+  // New goal creation state
   const [showNewGoal, setShowNewGoal] = useState(false);
-  const [newName, setNewName] = useState('');
-  const [newTarget, setNewTarget] = useState('');
+  // Use refs for add goal form to avoid re-render-on-keystroke focus loss
+  const newNameRef = useRef('');
+  const newTargetRef = useRef('');
+  const [newGoalKey, setNewGoalKey] = useState(0); // increment to reset form
 
   // Edit goal state (in-place in the expanded card)
-  const [editName, setEditName] = useState('');
-  const [editTarget, setEditTarget] = useState('');
+  // Use a ref to avoid focus loss while editing
+  const editNameRef = useRef('');
+  const editTargetRef = useRef('');
 
   // Uncontrolled add/withdraw inputs — use refs to avoid re-render-on-keystroke focus loss
   const addAmountText = useRef<Record<string, string>>({});
@@ -71,15 +74,17 @@ export default function SavingsScreen() {
   const [wdClearKey, setWdClearKey] = useState<Record<string, number>>({});
 
   const handleCreateGoal = useCallback(() => {
-    const target = parseFloat(newTarget);
-    if (!newName.trim()) { showMsg('Please enter a goal name.'); return; }
+    const name = newNameRef.current.trim();
+    const target = parseFloat(newTargetRef.current);
+    if (!name) { showMsg('Please enter a goal name.'); return; }
     if (isNaN(target) || target <= 0) { showMsg('Please enter a valid target amount.'); return; }
-    createSavingsGoal(newName.trim(), target, 0);
-    setNewName('');
-    setNewTarget('');
+    createSavingsGoal(name, target, 0);
+    newNameRef.current = '';
+    newTargetRef.current = '';
+    setNewGoalKey((k) => k + 1);
     setShowNewGoal(false);
     showMsg('New goal created!');
-  }, [newName, newTarget, createSavingsGoal, showMsg]);
+  }, [createSavingsGoal, showMsg]);
 
   const handleDeleteGoal = useCallback((goal: SavingsGoal) => {
     Alert.alert(
@@ -147,13 +152,6 @@ export default function SavingsScreen() {
 
   const ListHeader = useCallback(() => (
     <View style={{ gap: 16 }}>
-      {/* Message banner */}
-      {message && (
-        <View style={[styles.messageCard, { backgroundColor: colors.primaryLight }]}>
-          <Text style={[styles.messageText, { color: colors.onPrimary }]}>{message}</Text>
-        </View>
-      )}
-
       {/* Overall summary */}
       {savingsGoals.length > 0 && (
         <View style={[styles.summaryCard, { backgroundColor: colors.card }]}>
@@ -176,54 +174,8 @@ export default function SavingsScreen() {
           </View>
         </View>
       )}
-
-      {/* New Goal Card */}
-      {showNewGoal ? (
-        <View style={[styles.card, { backgroundColor: colors.card }]}>
-          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>New Savings Goal</Text>
-          <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Goal Name</Text>
-          <TextInput
-            style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
-            placeholder="What are you saving for?"
-            placeholderTextColor={colors.onSurfaceVariant}
-            value={newName}
-            onChangeText={setNewName}
-          />
-          <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Target Amount ($)</Text>
-          <TextInput
-            style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
-            placeholder="1000"
-            placeholderTextColor={colors.onSurfaceVariant}
-            keyboardType="decimal-pad"
-            value={newTarget}
-            onChangeText={setNewTarget}
-          />
-          <View style={styles.newGoalActions}>
-            <TouchableOpacity
-              style={[styles.saveBtn, { backgroundColor: colors.primary }]}
-              onPress={handleCreateGoal}
-            >
-              <Text style={styles.btnText}>Create Goal</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.cancelBtn, { borderColor: colors.outlineVariant }]}
-              onPress={() => { setShowNewGoal(false); setNewName(''); setNewTarget(''); }}
-            >
-              <Text style={[styles.cancelBtnText, { color: colors.onSurfaceVariant }]}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      ) : (
-        <TouchableOpacity
-          style={[styles.addGoalCard, { borderColor: colors.primary, backgroundColor: colors.primaryLight }]}
-          onPress={() => setShowNewGoal(true)}
-        >
-          <Text style={[styles.addGoalIcon, { color: colors.primary }]}>+</Text>
-          <Text style={[styles.addGoalText, { color: colors.primary }]}>Add New Goal</Text>
-        </TouchableOpacity>
-      )}
     </View>
-  ), [message, colors, savingsGoals, overallProgress, totalSaved, totalTarget, showNewGoal, newName, newTarget, handleCreateGoal]);
+  ), [colors, savingsGoals, overallProgress, totalSaved, totalTarget]);
 
   const renderGoalItem = useCallback(({ item: goal, drag, isActive, getIndex }: RenderItemParams<SavingsGoal>) => {
     const progress = goal.target_amount > 0
@@ -451,20 +403,22 @@ export default function SavingsScreen() {
                 <View>
                   <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Goal Name</Text>
                   <TextInput
+                    key={`edit-name-${goal.id}`}
                     style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                     placeholder="Goal name"
                     placeholderTextColor={colors.onSurfaceVariant}
                     defaultValue={goal.name}
-                    onChangeText={setEditName}
+                    onChangeText={(t) => { editNameRef.current = t; }}
                   />
                   <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Target Amount ($)</Text>
                   <TextInput
+                    key={`edit-target-${goal.id}`}
                     style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                     placeholder="1000"
                     placeholderTextColor={colors.onSurfaceVariant}
                     keyboardType="decimal-pad"
                     defaultValue={goal.target_amount.toString()}
-                    onChangeText={setEditTarget}
+                    onChangeText={(t) => { editTargetRef.current = t; }}
                   />
 
                   {/* Auto-Save per goal */}
@@ -519,11 +473,13 @@ export default function SavingsScreen() {
                   <TouchableOpacity
                     style={[styles.saveBtn, { backgroundColor: colors.primary }]}
                     onPress={() => {
-                      const name = editName.trim() || goal.name;
-                      const target = parseFloat(editTarget) || goal.target_amount;
+                      const name = editNameRef.current.trim() || goal.name;
+                      const target = parseFloat(editTargetRef.current) || goal.target_amount;
                       if (!name) { showMsg('Goal name is required.'); return; }
                       if (target <= 0) { showMsg('Enter a valid target amount.'); return; }
                       updateSavingsGoal(goal.id, name, target);
+                      editNameRef.current = '';
+                      editTargetRef.current = '';
                       showMsg('Goal updated!');
                     }}
                   >
@@ -543,7 +499,7 @@ export default function SavingsScreen() {
         </TouchableOpacity>
       </ScaleDecorator>
     );
-  }, [colors, expandedGoal, activeSection, editName, editTarget, user,
+  }, [colors, expandedGoal, activeSection, user,
       toggleGoal, handleAdd, handleWithdraw, handleQuickAdd, toggleAutoSave, setAutoSavePct,
       updateSavingsGoal, handleDeleteGoal, showMsg]);
 
@@ -566,7 +522,64 @@ export default function SavingsScreen() {
       {/* Top Bar */}
       <View style={[styles.topBar, { backgroundColor: colors.background }]}>
         <Text style={[styles.title, { color: colors.onSurface }]}>Savings</Text>
-      </View>        <DraggableFlatList
+      </View>
+
+      {/* Message banner (outside FlatList so typing doesn't remount header) */}
+      {message && (
+        <View style={[styles.messageCard, { backgroundColor: colors.primaryLight, marginHorizontal: 24, marginBottom: 4 }]}>
+          <Text style={[styles.messageText, { color: colors.onPrimary }]}>{message}</Text>
+        </View>
+      )}
+
+      {/* New Goal Card (outside FlatList to avoid TextInput focus loss on re-render) */}
+      {showNewGoal ? (
+        <View style={[styles.card, { backgroundColor: colors.card, marginHorizontal: 24, marginBottom: 12 }]}>
+          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>New Savings Goal</Text>
+          <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Goal Name</Text>
+          <TextInput
+            key={`new-name-${newGoalKey}`}
+            style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
+            placeholder="What are you saving for?"
+            placeholderTextColor={colors.onSurfaceVariant}
+            defaultValue=""
+            onChangeText={(t) => { newNameRef.current = t; }}
+          />
+          <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Target Amount ($)</Text>
+          <TextInput
+            key={`new-target-${newGoalKey}`}
+            style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
+            placeholder="1000"
+            placeholderTextColor={colors.onSurfaceVariant}
+            keyboardType="decimal-pad"
+            defaultValue=""
+            onChangeText={(t) => { newTargetRef.current = t; }}
+          />
+          <View style={styles.newGoalActions}>
+            <TouchableOpacity
+              style={[styles.saveBtn, { backgroundColor: colors.primary }]}
+              onPress={handleCreateGoal}
+            >
+              <Text style={styles.btnText}>Create Goal</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.cancelBtn, { borderColor: colors.outlineVariant }]}
+              onPress={() => { setShowNewGoal(false); newNameRef.current = ''; newTargetRef.current = ''; setNewGoalKey((k) => k + 1); }}
+            >
+              <Text style={[styles.cancelBtnText, { color: colors.onSurfaceVariant }]}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      ) : (
+        <TouchableOpacity
+          style={[styles.addGoalCard, { borderColor: colors.primary, backgroundColor: colors.primaryLight, marginHorizontal: 24, marginBottom: 12 }]}
+          onPress={() => setShowNewGoal(true)}
+        >
+          <Text style={[styles.addGoalIcon, { color: colors.primary }]}>+</Text>
+          <Text style={[styles.addGoalText, { color: colors.primary }]}>Add New Goal</Text>
+        </TouchableOpacity>
+      )}
+
+      <DraggableFlatList
         data={savingsGoals}
         renderItem={renderGoalItem}
         keyExtractor={(goal) => goal.id}
@@ -575,7 +588,7 @@ export default function SavingsScreen() {
         ListFooterComponent={ListFooter}
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
-        activationDistance={10}                extraData={{ expandedGoal, activeSection, editName, editTarget }}
+        activationDistance={10}                extraData={{ expandedGoal, activeSection }}
         containerStyle={{ flex: 1 }}
       />
     </SafeAreaView>

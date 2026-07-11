@@ -75,7 +75,7 @@ export default function SettingsScreen() {
   >({ status: 'idle' });
 
   const isElectron = !!(Platform.OS === 'web' && (window as any).electronAPI);
-  const appVersion = Constants.expoConfig?.version || '2.2.0';
+  const appVersion = Constants.expoConfig?.version || '2.3.0';
 
   const userInitiated = useRef(false);
 
@@ -126,6 +126,15 @@ export default function SettingsScreen() {
 
   // Check if user has a linked (shared) group
   const isLinked = (budget?.profiles_count ?? 1) > 1;
+
+  // Last synced timestamp from the store
+  const lastSyncedAt = useBudgetStore((s) => s.lastSyncedAt);
+  const [devMenuOpen, setDevMenuOpen] = useState(false);
+
+  // Format last synced time for display
+  const lastSyncedStr = lastSyncedAt
+    ? new Date(lastSyncedAt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+    : 'Never';
 
   const handleGenerateCode = async () => {
     setLinkError(null);
@@ -245,6 +254,10 @@ export default function SettingsScreen() {
                   <Text style={[styles.linkedSubtext, { color: colors.onSurfaceVariant }]}>
                     Your budgets are synced in real-time
                   </Text>
+                  <View style={styles.syncStatusRow}>
+                    <View style={[styles.syncDot, { backgroundColor: colors.income }]} />
+                    <Text style={[styles.syncStatusText, { color: colors.onSurfaceVariant }]}>Auto-sync active</Text>
+                  </View>
                 </View>
               </View>
               {linkError && <Text style={[styles.errorText, { marginTop: 8 }]}>{linkError}</Text>}
@@ -370,6 +383,68 @@ export default function SettingsScreen() {
           )}
         </View>
 
+        {/* Sync Status */}
+        <View style={[styles.card, { backgroundColor: colors.card }]}>
+          <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Sync Status</Text>
+          <View style={styles.syncInfoRow}>
+            <Text style={[styles.syncInfoLabel, { color: colors.onSurfaceVariant }]}>Last synced</Text>
+            <Text style={[styles.syncInfoValue, { color: colors.onSurface }]}>{lastSyncedStr}</Text>
+          </View>
+          <View style={styles.syncInfoRow}>
+            <Text style={[styles.syncInfoLabel, { color: colors.onSurfaceVariant }]}>Account connection</Text>
+            <Text style={[styles.syncInfoValue, { color: isLinked ? colors.income : colors.expense }]}>
+              {isLinked ? '✅ Shared budget' : '⚠️ Solo budget'}
+            </Text>
+          </View>
+          {budget?.profiles_count && (
+            <View style={styles.syncInfoRow}>
+              <Text style={[styles.syncInfoLabel, { color: colors.onSurfaceVariant }]}>People in group</Text>
+              <Text style={[styles.syncInfoValue, { color: colors.onSurface }]}>{budget.profiles_count}</Text>
+            </View>
+          )}
+          {!isLinked && (
+            <View style={[styles.notLinkedWarning, { backgroundColor: colors.surfaceContainerLow || '#F3F3F3', borderLeftColor: colors.expense }]}>
+              <Text style={styles.notLinkedEmoji}>🔗</Text>
+              <Text style={[styles.notLinkedText, { color: colors.onSurface }]}>
+                You and your partner each need to create accounts and link them using the <Text style={{ fontWeight: '700' }}>Partner Connection</Text> section above. Until then, you're each in your own private budget and won't see each other's data.
+              </Text>
+            </View>
+          )}
+          {/* Tap to reveal debug info */}
+          <TouchableOpacity onPress={() => setDevMenuOpen((p) => !p)} activeOpacity={0.7}>
+            <Text style={[styles.syncDebugHint, { color: colors.onSurfaceVariant }]}>
+              {devMenuOpen ? '▼ Debug Info' : '▶ Debug Info (tap to expand)'}
+            </Text>
+          </TouchableOpacity>
+          {devMenuOpen && (
+            <View style={styles.debugSection}>
+              <View style={styles.debugRow}>
+                <Text style={[styles.debugLabel, { color: colors.onSurfaceVariant }]}>Group ID</Text>
+                <Text style={[styles.debugValue, { color: colors.onSurface }]} selectable>{budget?.id || 'N/A'}</Text>
+              </View>
+              <View style={styles.debugRow}>
+                <Text style={[styles.debugLabel, { color: colors.onSurfaceVariant }]}>Profiles count</Text>
+                <Text style={[styles.debugValue, { color: colors.onSurface }]}>{budget?.profiles_count ?? 'N/A'}</Text>
+              </View>
+              <View style={styles.debugRow}>
+                <Text style={[styles.debugLabel, { color: colors.onSurfaceVariant }]}>User ID</Text>
+                <Text style={[styles.debugValue, { color: colors.onSurface }]} selectable>{user?.id || 'N/A'}</Text>
+              </View>
+              <View style={styles.debugRow}>
+                <Text style={[styles.debugLabel, { color: colors.onSurfaceVariant }]}>API Base URL</Text>
+                <Text style={[styles.debugValue, { color: colors.onSurface }]} selectable>{process.env.EXPO_PUBLIC_API_URL || 'localhost'}</Text>
+              </View>
+              <View style={styles.debugRow}>
+                <Text style={[styles.debugLabel, { color: colors.onSurfaceVariant }]}>Sync polling</Text>
+                <Text style={[styles.debugValue, { color: colors.onSurface }]}>Every 15s (active)</Text>
+              </View>
+              <Text style={[styles.debugHelp, { color: colors.onSurfaceVariant }]}>
+                If Profiles count is 1, you and your partner are in different budget groups. Use the Partner Connection section to link them.
+              </Text>
+            </View>
+          )}
+        </View>
+
         {/* App Info — Updates */}
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <Text style={[styles.cardTitle, { color: colors.onSurface }]}>App Info</Text>
@@ -489,4 +564,24 @@ const styles = StyleSheet.create({
   catBudgetDollar: { fontSize: 15, fontWeight: '500' },
   catBudgetInput: { borderWidth: 1, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, fontWeight: '600', textAlign: 'right', flex: 1 },
   saveBudgetsBtn: { width: '100%', paddingVertical: 14, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 8 },
+
+  // Sync Status
+  syncInfoRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  syncInfoLabel: { fontSize: 13, fontWeight: '500' },
+  syncInfoValue: { fontSize: 13, fontWeight: '700' },
+  syncStatusRow: { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 },
+  syncDot: { width: 6, height: 6, borderRadius: 3 },
+  syncStatusText: { fontSize: 12, fontWeight: '500' },
+  notLinkedWarning: {
+    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+    padding: 14, borderRadius: 12, borderLeftWidth: 4, borderWidth: 1, marginTop: 12,
+  },
+  notLinkedEmoji: { fontSize: 16, marginTop: 1 },
+  notLinkedText: { fontSize: 13, lineHeight: 18, flex: 1 },
+  syncDebugHint: { fontSize: 12, fontWeight: '500', marginTop: 12, textAlign: 'center' },
+  debugSection: { padding: 12, borderRadius: 12, marginTop: 8, gap: 8 },
+  debugRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  debugLabel: { fontSize: 11, fontWeight: '500' },
+  debugValue: { fontSize: 11, fontWeight: '600', maxWidth: '60%', textAlign: 'right' },
+  debugHelp: { fontSize: 11, lineHeight: 15, marginTop: 8, fontStyle: 'italic' },
 });
