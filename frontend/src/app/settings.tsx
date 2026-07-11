@@ -75,7 +75,7 @@ export default function SettingsScreen() {
   >({ status: 'idle' });
 
   const isElectron = !!(Platform.OS === 'web' && (window as any).electronAPI);
-  const appVersion = Constants.expoConfig?.version || (isElectron ? '2.2.0' : '1.0.0');
+  const appVersion = Constants.expoConfig?.version || '2.2.0';
 
   const userInitiated = useRef(false);
 

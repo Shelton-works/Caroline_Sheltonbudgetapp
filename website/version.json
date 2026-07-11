@@ -5,13 +5,13 @@
   "platforms": {
     "windows": {
       "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.2.0/Our.Finances.Setup.2.2.0.exe",
-      "checksum_sha256": "67a17ec841e1fe827ab685cc536392e2e30c2ddb134f7f805cc24b5ce3e7ad3a",
+      "checksum_sha256": "8de40b9700f4459e193255136d2e79add1f28041f880bd572b330f0abd8ea00a",
       "minimum_version": "1.0.0",
       "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.2.0"
     },
     "android": {
       "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.2.0/Our.Finances.2.2.0.apk",
-      "checksum_sha256": "e9b0b49fa0e73900b9d8973049ed84a9e485893bf78cc6a82b7d9ad387d26c16",
+      "checksum_sha256": "3410d4028979b69ab93ce56bdeaeb3333cde4f6116e1709c89566ce44e7e0718",
       "minimum_version": "1.0.0",
       "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.2.0"
     }
