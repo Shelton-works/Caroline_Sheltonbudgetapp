@@ -4,8 +4,8 @@
   "release_date": "2026-07-10",
   "platforms": {
     "windows": {
-      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.2.0/Our.Finances.Setup.2.2.0.exe",
-      "checksum_sha256": "8de40b9700f4459e193255136d2e79add1f28041f880bd572b330f0abd8ea00a",
+      "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.2.0/Our%20Finances%20Setup%202.2.0.exe",
+      "checksum_sha256": "d5532047fecdd15c31dc776de62834ef8f3ebd12c60305622c4b5abd93ee5c47",
       "minimum_version": "1.0.0",
       "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.2.0"
     },
