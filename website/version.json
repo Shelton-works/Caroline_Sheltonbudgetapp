@@ -1,7 +1,7 @@
 {
   "version": "2.2.0",
   "release_notes": "v2.2.0 — Edit/delete transactions, analytics filter fix, configurable budgets, and transfer button",
-  "release_date": "2026-07-10",
+  "release_date": "2026-07-11",
   "platforms": {
     "windows": {
       "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.2.0/Our%20Finances%20Setup%202.2.0.exe",
