@@ -5,7 +5,7 @@
   "platforms": {
     "windows": {
       "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.2.0/Our-Finances-Setup-2.2.0.exe",
-      "checksum_sha256": "d5532047fecdd15c31dc776de62834ef8f3ebd12c60305622c4b5abd93ee5c47",
+      "checksum_sha256": "9c8fcd8a82193c8dc2964e05d021869db4cf67d79ef00f01c17bbc86b9c2f21b",
       "minimum_version": "1.0.0",
       "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.2.0"
     },
