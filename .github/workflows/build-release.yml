@@ -65,8 +65,11 @@ jobs:
         working-directory: frontend/electron/dist
         shell: pwsh
         run: |
-          $installer = Get-ChildItem "Our-Finances-Setup-*.exe" | Select-Object -First 1
-          $portable  = Get-ChildItem "Our-Finances-*.exe" -Exclude "Our-Finances-Setup-*" | Select-Object -First 1
+          $installer = Get-ChildItem "Our Finances Setup *.exe" | Select-Object -First 1
+          $portable  = Get-ChildItem "Our Finances *.exe" -Exclude "Our Finances Setup*" | Select-Object -First 1
+
+          Write-Host "Found installer: $($installer.Name)"
+          Write-Host "Found portable: $($portable.Name)"
 
           $installerHash = (Get-FileHash $installer.FullName -Algorithm SHA256).Hash.ToLower()
           $portableHash  = (Get-FileHash $portable.FullName -Algorithm SHA256).Hash.ToLower()
@@ -86,8 +89,8 @@ jobs:
         with:
           name: exe-builds
           path: |
-            frontend/electron/dist/Our-Finances-Setup-*.exe
-            frontend/electron/dist/Our-Finances-2*.exe
+            frontend/electron/dist/Our Finances Setup *.exe
+            frontend/electron/dist/Our Finances *.exe
           retention-days: 5
 
       - name: Upload latest.yml + blockmap
@@ -179,7 +182,24 @@ jobs:
 
       - name: Build APK
         working-directory: frontend/android
-        run: ./gradlew assembleRelease --no-daemon
+        shell: pwsh
+        run: |
+          # Retry up to 3 times for flaky ninja build.ninja issue on Windows CI
+          $tries = 0
+          $maxTries = 3
+          do {
+            $tries++
+            Write-Host "=== Gradle build attempt $tries of $maxTries ==="
+            if ($tries -gt 1) {
+              ./gradlew clean
+            }
+            ./gradlew assembleRelease --no-daemon 2>&1
+            $exitCode = $LASTEXITCODE
+            if ($exitCode -eq 0) { break }
+            Write-Host "Attempt $tries failed with exit code $exitCode. Retrying..."
+            if ($tries -ge $maxTries) { exit $exitCode }
+            Start-Sleep -Seconds 10
+          } while ($true)
 
       - name: Verify APK exists
         working-directory: frontend/android
