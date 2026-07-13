@@ -120,8 +120,21 @@ jobs:
   build-apk:
     runs-on: windows-latest
     steps:
+      - name: Shorten workspace path (avoid Windows 260-char path limit)
+        shell: pwsh
+        run: |
+          $shortPath = 'C:\a'
+          if (-not (Test-Path $shortPath)) {
+            New-Item -ItemType Directory -Path $shortPath -Force | Out-Null
+          }
+          echo "GITHUB_WORKSPACE=$shortPath" >> $env:GITHUB_ENV
+          echo "Workspace shortened to: $shortPath"
+
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # Set clean=false so we don't delete the workspace we just created
+          clean: false
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
