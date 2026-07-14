@@ -14,12 +14,12 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { Colors, Spacing, BorderRadius } from '../constants/theme';
 import { AddTransactionModal } from '../components/AddTransactionModal';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 function BalanceCountUp({ target, decimals = 2 }: { target: number; decimals?: number }) {
   const animatedValue = useRef(new Animated.Value(0)).current;
@@ -146,6 +146,8 @@ export default function HomeScreen() {
   const [viewAllVisible, setViewAllVisible] = useState(false);
   const [editTxVisible, setEditTxVisible] = useState(false);
   const [editTx, setEditTx] = useState<EditTxData | null>(null);
+  const [actionTarget, setActionTarget] = useState<any>(null);
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
 
   // Pull-to-refresh: manually refresh data
   const onRefresh = useCallback(async () => {
@@ -173,45 +175,40 @@ export default function HomeScreen() {
   }, []);
 
   const handleTransactionLongPress = useCallback((tx: any) => {
-    Alert.alert(
-      tx.memo || 'Transaction',
-      `$${Number(tx.amount).toFixed(2)} • ${tx.category}\nWhat would you like to do?`,
-      [
-        {
-          text: 'Edit',
-          onPress: () => {
-            setEditTx({
-              id: tx.id,
-              amount: tx.amount.toString(),
-              memo: tx.memo,
-              category: tx.category,
-              type: tx.type,
-            });
-            setEditTxVisible(true);
-          },
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            Alert.alert(
-              'Delete Transaction',
-              `Are you sure you want to delete "${tx.memo}" ($${Number(tx.amount).toFixed(2)})? This will adjust your balance.`,
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Delete',
-                  style: 'destructive',
-                  onPress: () => deleteTransaction(tx.id),
-                },
-              ]
-            );
-          },
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
-  }, [deleteTransaction]);
+    setActionTarget(tx);
+  }, []);
+
+  const handleActionEdit = useCallback(() => {
+    const tx = actionTarget;
+    if (!tx) return;
+    setEditTx({
+      id: tx.id,
+      amount: tx.amount.toString(),
+      memo: tx.memo,
+      category: tx.category,
+      type: tx.type,
+    });
+    setEditTxVisible(true);
+    setActionTarget(null);
+  }, [actionTarget]);
+
+  const handleActionDelete = useCallback(() => {
+    const tx = actionTarget;
+    if (!tx) return;
+    setActionTarget(null);
+    setDeleteTarget(tx);
+  }, [actionTarget]);
+
+  const confirmDeleteTx = useCallback(() => {
+    const tx = deleteTarget;
+    if (!tx) return;
+    deleteTransaction(tx.id);
+    setDeleteTarget(null);
+  }, [deleteTarget, deleteTransaction]);
+
+  const cancelDeleteTx = useCallback(() => {
+    setDeleteTarget(null);
+  }, []);
 
   const handleEditSave = useCallback(async () => {
     if (!editTx) return;
@@ -357,6 +354,50 @@ export default function HomeScreen() {
         onSave={addTransaction}
       />
 
+      {/* Transaction Action Sheet */}
+      <Modal visible={actionTarget !== null} animationType="fade" transparent>
+        <Pressable style={styles.overlay} onPress={() => setActionTarget(null)}>
+          <Pressable style={[styles.actionSheet, { backgroundColor: colors.card }]} onPress={(e) => e.stopPropagation()}>
+            <Text style={[styles.actionSheetTitle, { color: colors.onSurface }]}>
+              {actionTarget?.memo || 'Transaction'}
+            </Text>
+            <Text style={[styles.actionSheetSubtitle, { color: colors.onSurfaceVariant }]}>
+              ${Number(actionTarget?.amount || 0).toFixed(2)} • {actionTarget?.category || ''}
+            </Text>
+            <TouchableOpacity
+              style={[styles.actionSheetBtn, { backgroundColor: colors.primaryLight }]}
+              onPress={handleActionEdit}
+            >
+              <Text style={[styles.actionSheetBtnText, { color: colors.primary }]}>Edit</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionSheetBtn, { backgroundColor: '#FFE8E5' }]}
+              onPress={handleActionDelete}
+            >
+              <Text style={[styles.actionSheetBtnText, { color: colors.expense }]}>Delete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.actionSheetCancel, { borderColor: colors.outlineVariant }]}
+              onPress={() => setActionTarget(null)}
+            >
+              <Text style={[styles.actionSheetCancelText, { color: colors.onSurfaceVariant }]}>Cancel</Text>
+            </TouchableOpacity>
+          </Pressable>
+        </Pressable>
+      </Modal>
+
+      {/* Delete Transaction Confirmation */}
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Delete Transaction"
+        message={deleteTarget ? `Are you sure you want to delete "${deleteTarget.memo}" ($${Number(deleteTarget.amount).toFixed(2)})? This will adjust your balance.` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={confirmDeleteTx}
+        onCancel={cancelDeleteTx}
+      />
+
       {/* View All Transactions Modal */}
       <Modal visible={viewAllVisible} animationType="slide" transparent>
         <SafeAreaView style={[styles.modalOverlay, { backgroundColor: colors.background }]}>
@@ -404,6 +445,7 @@ export default function HomeScreen() {
                 <>
                   <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Amount</Text>
                   <TextInput
+                    nativeID="editTxAmount"
                     style={[styles.editInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                     keyboardType="decimal-pad"
                     value={editTx.amount}
@@ -412,6 +454,7 @@ export default function HomeScreen() {
 
                   <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Memo</Text>
                   <TextInput
+                    nativeID="editTxMemo"
                     style={[styles.editInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                     value={editTx.memo}
                     onChangeText={(t) => setEditTx((prev) => prev ? { ...prev, memo: t } : null)}
@@ -569,4 +612,35 @@ const styles = StyleSheet.create({
   btnLabel: { fontSize: 16, fontWeight: '700' },
   cancelBtn: { paddingVertical: 14, borderRadius: 14, alignItems: 'center', justifyContent: 'center', borderWidth: 1, marginTop: 8 },
   cancelLabel: { fontSize: 14, fontWeight: '600' },
+
+  // Action Sheet
+  actionSheet: {
+    marginHorizontal: 24,
+    borderRadius: 20,
+    padding: 24,
+    gap: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.25,
+    shadowRadius: 24,
+    elevation: 12,
+  },
+  actionSheetTitle: { fontSize: 18, fontWeight: '700', fontFamily: 'Montserrat', textAlign: 'center' },
+  actionSheetSubtitle: { fontSize: 14, fontWeight: '500', textAlign: 'center', marginBottom: 8 },
+  actionSheetBtn: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  actionSheetBtnText: { fontSize: 16, fontWeight: '700' },
+  actionSheetCancel: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  actionSheetCancelText: { fontSize: 15, fontWeight: '600' },
 });

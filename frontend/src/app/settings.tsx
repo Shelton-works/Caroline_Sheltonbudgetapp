@@ -9,13 +9,13 @@ import {
   useColorScheme,
   Share,
   Platform,
-  Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Constants from 'expo-constants';
 import { useBudgetStore } from '../store/useBudgetStore';
 import { Colors, Spacing, BorderRadius } from '../constants/theme';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 const CATEGORY_BUDGETS_KEY = '@ourfinances_category_budgets';
 
@@ -66,6 +66,7 @@ export default function SettingsScreen() {
   const [limit, setLimit] = useState(budget?.monthly_limit.toString() || '2000');
   const [linkError, setLinkError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [showDisconnectConfirm, setShowDisconnectConfirm] = useState(false);
   const [categoryBudgets, setCategoryBudgets] = useState<Record<string, string>>({});
   const [budgetsLoaded, setBudgetsLoaded] = useState(false);
 
@@ -170,28 +171,24 @@ export default function SettingsScreen() {
     }
   };
 
-  const handleDisconnect = async () => {
+  const handleDisconnect = () => {
     setLinkError(null);
     setSuccessMsg(null);
-    Alert.alert(
-      'Disconnect Partner',
-      'Are you sure you want to disconnect from your partner? You will no longer share a budget or savings goals, and you will be moved to a private budget.',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Disconnect',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              await disconnectPartner();
-              setSuccessMsg('Successfully disconnected from your partner.');
-            } catch (err: any) {
-              setLinkError(err.message || 'Failed to disconnect. Please try again.');
-            }
-          },
-        },
-      ]
-    );
+    setShowDisconnectConfirm(true);
+  };
+
+  const confirmDisconnect = async () => {
+    setShowDisconnectConfirm(false);
+    try {
+      await disconnectPartner();
+      setSuccessMsg('Successfully disconnected from your partner.');
+    } catch (err: any) {
+      setLinkError(err.message || 'Failed to disconnect. Please try again.');
+    }
+  };
+
+  const cancelDisconnect = () => {
+    setShowDisconnectConfirm(false);
   };
 
   const handleUpdateLimit = async () => {
@@ -241,7 +238,19 @@ export default function SettingsScreen() {
           </View>
         </View>
 
-        {/* Partner Link Section */}
+        {/* Disconnect Partner Confirmation */}
+      <ConfirmDialog
+        visible={showDisconnectConfirm}
+        title="Disconnect Partner"
+        message="Are you sure you want to disconnect from your partner? You will no longer share a budget or savings goals, and you will be moved to a private budget."
+        confirmLabel="Disconnect"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={confirmDisconnect}
+        onCancel={cancelDisconnect}
+      />
+
+      {/* Partner Link Section */}
         <View style={[styles.card, { backgroundColor: colors.card }]}>
           <Text style={[styles.cardTitle, { color: colors.onSurface }]}>Partner Connection</Text>
 
@@ -282,6 +291,7 @@ export default function SettingsScreen() {
               <Text style={[styles.subLabel, { color: colors.onSurface }]}>Have a code? Enter it here:</Text>
               <View style={styles.rowInput}>
                 <TextInput
+                  nativeID="partnerCode"
                   style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                   placeholder="Enter 6-digit code"
                   placeholderTextColor={colors.onSurfaceVariant}
@@ -335,6 +345,7 @@ export default function SettingsScreen() {
           </Text>
           <View style={styles.rowInput}>
             <TextInput
+              nativeID="budgetLimit"
               style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
               placeholder="Budget Limit"
               placeholderTextColor={colors.onSurfaceVariant}
@@ -365,6 +376,7 @@ export default function SettingsScreen() {
                   <View style={styles.catBudgetInputRow}>
                     <Text style={[styles.catBudgetDollar, { color: colors.onSurfaceVariant }]}>$</Text>
                     <TextInput
+                      nativeID={`catBudget_${cat.replace(/\s+/g, '')}`}
                       style={[styles.catBudgetInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                       keyboardType="numeric"
                       value={categoryBudgets[cat] || _default}

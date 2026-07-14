@@ -116,6 +116,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <View style={styles.inputWrapper}>
                 <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Amount</Text>
                 <TextInput
+                  nativeID="txAmount"
                   style={[styles.amountInput, { color: colors.onSurface, borderBottomColor: colors.primary }]}
                   placeholder="$0.00"
                   placeholderTextColor={colors.onSurfaceVariant}
@@ -130,6 +131,7 @@ export const AddTransactionModal: React.FC<AddTransactionModalProps> = ({
               <View style={styles.inputWrapper}>
                 <Text style={[styles.label, { color: colors.onSurfaceVariant }]}>Memo (Required)</Text>
                 <TextInput
+                  nativeID="txMemo"
                   style={[styles.memoInput, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                   placeholder="What is this for?"
                   placeholderTextColor={colors.onSurfaceVariant}

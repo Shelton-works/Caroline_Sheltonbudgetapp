@@ -6,7 +6,6 @@ import {
   TextInput,
   TouchableOpacity,
   useColorScheme,
-  Alert,
   Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -16,6 +15,7 @@ import DraggableFlatList, {
 } from 'react-native-draggable-flatlist';
 import { useBudgetStore, SavingsGoal } from '../store/useBudgetStore';
 import { Colors } from '../constants/theme';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 
 type ActiveSection = 'none' | 'add' | 'withdraw' | 'settings';
 
@@ -57,6 +57,7 @@ export default function SavingsScreen() {
 
   // New goal creation state
   const [showNewGoal, setShowNewGoal] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<SavingsGoal | null>(null);
   // Use refs for add goal form to avoid re-render-on-keystroke focus loss
   const newNameRef = useRef('');
   const newTargetRef = useRef('');
@@ -87,23 +88,21 @@ export default function SavingsScreen() {
   }, [createSavingsGoal, showMsg]);
 
   const handleDeleteGoal = useCallback((goal: SavingsGoal) => {
-    Alert.alert(
-      'Delete Goal',
-      `Are you sure you want to delete "${goal.name}"? All saved progress will be lost.`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: () => {
-            deleteSavingsGoal(goal.id);
-            setExpandedGoal(null);
-            showMsg('Goal deleted.');
-          },
-        },
-      ],
-    );
-  }, [deleteSavingsGoal, showMsg]);
+    setDeleteTarget(goal);
+  }, []);
+
+  const confirmDelete = useCallback(() => {
+    const goal = deleteTarget;
+    if (!goal) return;
+    deleteSavingsGoal(goal.id);
+    setExpandedGoal(null);
+    setDeleteTarget(null);
+    showMsg('Goal deleted.');
+  }, [deleteTarget, deleteSavingsGoal, showMsg]);
+
+  const cancelDelete = useCallback(() => {
+    setDeleteTarget(null);
+  }, []);
 
   const handleAdd = useCallback((goal: SavingsGoal) => {
     const amount = parseFloat(addAmountText.current[goal.id] || '');
@@ -349,6 +348,7 @@ export default function SavingsScreen() {
 
                   <View style={styles.rowInput}>
                     <TextInput
+                      nativeID={`addAmount_${goal.id}`}
                       key={`add-${goal.id}-${addClearKey[goal.id] || 0}`}
                       style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                       placeholder="Amount"
@@ -380,6 +380,7 @@ export default function SavingsScreen() {
                 <View>
                   <View style={styles.rowInput}>
                     <TextInput
+                      nativeID={`withdrawAmount_${goal.id}`}
                       key={`wd-${goal.id}-${wdClearKey[goal.id] || 0}`}
                       style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                       placeholder="Amount"
@@ -403,6 +404,7 @@ export default function SavingsScreen() {
                 <View>
                   <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Goal Name</Text>
                   <TextInput
+                    nativeID={`editGoalName_${goal.id}`}
                     key={`edit-name-${goal.id}`}
                     style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                     placeholder="Goal name"
@@ -412,6 +414,7 @@ export default function SavingsScreen() {
                   />
                   <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Target Amount ($)</Text>
                   <TextInput
+                    nativeID={`editGoalTarget_${goal.id}`}
                     key={`edit-target-${goal.id}`}
                     style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
                     placeholder="1000"
@@ -531,12 +534,25 @@ export default function SavingsScreen() {
         </View>
       )}
 
+      {/* Delete Goal Confirmation Dialog */}
+      <ConfirmDialog
+        visible={deleteTarget !== null}
+        title="Delete Goal"
+        message={deleteTarget ? `Are you sure you want to delete "${deleteTarget.name}"? All saved progress will be lost.` : ''}
+        confirmLabel="Delete"
+        cancelLabel="Cancel"
+        destructive
+        onConfirm={confirmDelete}
+        onCancel={cancelDelete}
+      />
+
       {/* New Goal Card (outside FlatList to avoid TextInput focus loss on re-render) */}
       {showNewGoal ? (
         <View style={[styles.card, { backgroundColor: colors.card, marginHorizontal: 24, marginBottom: 12 }]}>
           <Text style={[styles.cardTitle, { color: colors.onSurface }]}>New Savings Goal</Text>
           <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Goal Name</Text>
           <TextInput
+            nativeID="newGoalName"
             key={`new-name-${newGoalKey}`}
             style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
             placeholder="What are you saving for?"
@@ -546,6 +562,7 @@ export default function SavingsScreen() {
           />
           <Text style={[styles.inputLabel, { color: colors.onSurfaceVariant }]}>Target Amount ($)</Text>
           <TextInput
+            nativeID="newGoalTarget"
             key={`new-target-${newGoalKey}`}
             style={[styles.input, { color: colors.onSurface, borderColor: colors.outlineVariant, backgroundColor: colors.surfaceContainerLow }]}
             placeholder="1000"
