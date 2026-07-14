@@ -358,3 +358,26 @@ jobs:
           echo "| ${{ needs.build-exe.outputs.installer_name }} | ${{ needs.build-exe.outputs.installer_size }} bytes | \`${{ needs.build-exe.outputs.installer_hash }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| ${{ needs.build-exe.outputs.portable_name }} | ${{ needs.build-exe.outputs.portable_size }} bytes | \`${{ needs.build-exe.outputs.portable_hash }}\` |" >> $GITHUB_STEP_SUMMARY
           echo "| Our.Finances.${{ steps.version.outputs.version }}.apk | ${{ needs.build-apk.outputs.apk_size }} bytes | \`${{ needs.build-apk.outputs.apk_hash }}\` |" >> $GITHUB_STEP_SUMMARY
+
+  # ── Deploy Backend to Render ──────────────────────────────────────────
+  deploy-backend:
+    needs: [publish-release]
+    if: ${{ secrets.RENDER_DEPLOY_HOOK_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Render deploy
+        run: |
+          echo "🚀 Triggering Render backend deploy..."
+          RESPONSE=$(curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+          DEPLOY_ID=$(echo "$RESPONSE" | grep -o '"deployId"[^,]*' | grep -o '[^:"]*$' | head -1 || echo "unknown")
+          echo "Response: $RESPONSE"
+          echo "Deploy ID: $DEPLOY_ID"
+          echo ""
+          echo "✅ Backend deploy triggered! Track at:"
+          echo "   https://dashboard.render.com"
+
+      - name: Wait for deploy to complete
+        run: |
+          echo "⏳ Waiting 60s for deploy to start..."
+          sleep 60
+          echo "✅ Done — check Render dashboard for status." >> $GITHUB_STEP_SUMMARY
