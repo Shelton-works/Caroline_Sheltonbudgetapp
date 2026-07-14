@@ -120,24 +120,24 @@ jobs:
   build-apk:
     runs-on: windows-latest
     steps:
-      - name: Checkout to short path (avoid Windows MAX_PATH)
+      - name: Checkout
         uses: actions/checkout@v4
-        with:
-          path: C:\r
 
-      - name: Fix GITHUB_WORKSPACE for subsequent steps
+      - name: Shorten workspace path via subst (fixes CMake MAX_PATH + Defender race condition)
         shell: pwsh
         run: |
-          echo "GITHUB_WORKSPACE=C:\r" >> $env:GITHUB_ENV
-          Write-Host "Workspace set to: C:\r"
+          $shortDrive = 'B:'
+          subst $shortDrive $env:GITHUB_WORKSPACE
+          echo "GITHUB_WORKSPACE=$shortDrive\" >> $env:GITHUB_ENV
+          Write-Host "Mapped $shortDrive → $env:GITHUB_WORKSPACE"
+          Write-Host "Workspace shortened from $($env:GITHUB_WORKSPACE.Length) chars to 2 chars"
 
-      - name: Disable Windows Defender for workspace (fixes ninja manifest race condition)
+      - name: Disable Windows Defender real-time scanning (prevents ninja manifest lock contention)
         shell: pwsh
         run: |
           try {
             Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction Stop
-            Add-MpPreference -ExclusionPath "C:\r" -ErrorAction SilentlyContinue
-            Write-Host "Windows Defender real-time monitoring disabled, exclusions set for C:\r"
+            Write-Host "Windows Defender real-time monitoring disabled"
           }
           catch {
             Write-Warning "Could not disable Defender: $($_.Exception.Message)"
