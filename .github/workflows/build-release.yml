@@ -284,7 +284,9 @@ jobs:
           EXE_SIZE="${{ needs.build-exe.outputs.installer_size }}"
           APK_HASH="${{ needs.build-apk.outputs.apk_hash }}"
           EXE_HASH="${{ needs.build-exe.outputs.installer_hash }}"
-          EXE_NAME="${{ needs.build-exe.outputs.installer_name }}"
+          EXE_NAME_RAW="${{ needs.build-exe.outputs.installer_name }}"
+          # Normalize spaces to dots — GitHub release assets replace spaces with dots
+          EXE_NAME="${EXE_NAME_RAW// /.}"
           TAG="v$VERSION"
           TODAY=$(date -u +"%Y-%m-%d")
           REPO="https://github.com/Shelton-works/Caroline_Sheltonbudgetapp"
