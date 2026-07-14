@@ -120,21 +120,28 @@ jobs:
   build-apk:
     runs-on: windows-latest
     steps:
-      - name: Shorten workspace path (avoid Windows 260-char path limit)
-        shell: pwsh
-        run: |
-          $shortPath = 'C:\a'
-          if (-not (Test-Path $shortPath)) {
-            New-Item -ItemType Directory -Path $shortPath -Force | Out-Null
-          }
-          echo "GITHUB_WORKSPACE=$shortPath" >> $env:GITHUB_ENV
-          echo "Workspace shortened to: $shortPath"
-
-      - name: Checkout
+      - name: Checkout to short path (avoid Windows MAX_PATH)
         uses: actions/checkout@v4
         with:
-          # Set clean=false so we don't delete the workspace we just created
-          clean: false
+          path: C:\r
+
+      - name: Fix GITHUB_WORKSPACE for subsequent steps
+        shell: pwsh
+        run: |
+          echo "GITHUB_WORKSPACE=C:\r" >> $env:GITHUB_ENV
+          Write-Host "Workspace set to: C:\r"
+
+      - name: Disable Windows Defender for workspace (fixes ninja manifest race condition)
+        shell: pwsh
+        run: |
+          try {
+            Set-MpPreference -DisableRealtimeMonitoring $true -ErrorAction Stop
+            Add-MpPreference -ExclusionPath "C:\r" -ErrorAction SilentlyContinue
+            Write-Host "Windows Defender real-time monitoring disabled, exclusions set for C:\r"
+          }
+          catch {
+            Write-Warning "Could not disable Defender: $($_.Exception.Message)"
+          }
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -193,25 +200,34 @@ jobs:
           $updated = Get-Content $gradlePath | Select-String 'versionName|versionCode'
           $updated | ForEach-Object { Write-Host $_.Line.Trim() }
 
-      - name: Build APK
+      - name: Build APK (with retry for flaky ninja)
         working-directory: frontend/android
         shell: pwsh
         run: |
-          # Retry up to 3 times for flaky ninja build.ninja issue on Windows CI
           $tries = 0
           $maxTries = 3
           do {
             $tries++
             Write-Host "=== Gradle build attempt $tries of $maxTries ==="
             if ($tries -gt 1) {
+              Write-Host "Cleaning before retry..."
+              Remove-Item -Recurse -Force -ErrorAction SilentlyContinue .cxx
               ./gradlew clean
+              Start-Sleep -Seconds 15
             }
-            ./gradlew assembleRelease --no-daemon 2>&1
+            # --no-build-cache avoids stale cache entries triggering ninja manifest regeneration
+            ./gradlew assembleRelease --no-daemon --no-build-cache 2>&1
             $exitCode = $LASTEXITCODE
-            if ($exitCode -eq 0) { break }
-            Write-Host "Attempt $tries failed with exit code $exitCode. Retrying..."
-            if ($tries -ge $maxTries) { exit $exitCode }
-            Start-Sleep -Seconds 10
+            if ($exitCode -eq 0) {
+              Write-Host "Gradle build succeeded on attempt $tries"
+              break
+            }
+            Write-Host "Attempt $tries failed with exit code $exitCode. Retrying in 15s..."
+            if ($tries -ge $maxTries) {
+              Write-Error "All $maxTries attempts failed. Last exit code: $exitCode"
+              exit $exitCode
+            }
+            Start-Sleep -Seconds 15
           } while ($true)
 
       - name: Verify APK exists
