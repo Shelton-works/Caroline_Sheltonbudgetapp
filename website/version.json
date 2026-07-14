@@ -1,17 +1,17 @@
 {
   "version": "2.3.2",
-  "release_notes": "v2.3.2 — Production database migration for savings goals feature, compatibility fix for PostgreSQL < 15",
+  "release_notes": "v2.3.2 — Cross-device sync fix, savings input fix, and partner connection debug info",
   "release_date": "2026-07-14",
   "platforms": {
     "windows": {
       "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.3.2/Our.Finances.Setup.2.3.2.exe",
-      "checksum_sha256": "",
+      "checksum_sha256": "31a9c33c3458534842d5b66cfcc99099d629965c4ad19543ec0c8404e4956cfa",
       "minimum_version": "1.0.0",
       "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.3.2"
     },
     "android": {
       "download_url": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/download/v2.3.2/Our.Finances.2.3.2.apk",
-      "checksum_sha256": "",
+      "checksum_sha256": "b5febb2100f49e618c3b99de9f8de1e12a864f76c150cc665505e1592f2ca7b8",
       "minimum_version": "1.0.0",
       "github_release": "https://github.com/Shelton-works/Caroline_Sheltonbudgetapp/releases/tag/v2.3.2"
     }
