@@ -166,6 +166,8 @@ jobs:
 
       - name: Build APK (with retry)
         working-directory: frontend/android
+        env:
+          GRADLE_OPTS: -Xmx4608m -XX:MaxMetaspaceSize=512m
         run: |
           tries=0
           maxTries=3
