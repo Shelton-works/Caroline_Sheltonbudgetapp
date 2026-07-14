@@ -362,13 +362,27 @@ jobs:
   # ── Deploy Backend to Render ──────────────────────────────────────────
   deploy-backend:
     needs: [publish-release]
-    if: ${{ secrets.RENDER_DEPLOY_HOOK_URL != '' }}
     runs-on: ubuntu-latest
     steps:
+      - name: Check deploy hook is configured
+        id: check
+        env:
+          HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
+        run: |
+          if [ -z "$HOOK_URL" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+            echo "⚠️ RENDER_DEPLOY_HOOK_URL secret not set — skipping backend deploy"
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Trigger Render deploy
+        if: steps.check.outputs.skip == 'false'
+        env:
+          HOOK_URL: ${{ secrets.RENDER_DEPLOY_HOOK_URL }}
         run: |
           echo "🚀 Triggering Render backend deploy..."
-          RESPONSE=$(curl -s -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}")
+          RESPONSE=$(curl -s -X POST "$HOOK_URL")
           DEPLOY_ID=$(echo "$RESPONSE" | grep -o '"deployId"[^,]*' | grep -o '[^:"]*$' | head -1 || echo "unknown")
           echo "Response: $RESPONSE"
           echo "Deploy ID: $DEPLOY_ID"
@@ -377,6 +391,7 @@ jobs:
           echo "   https://dashboard.render.com"
 
       - name: Wait for deploy to initialize
+        if: steps.check.outputs.skip == 'false'
         run: |
           echo "⏳ Waiting 60s for deploy to start building..."
           sleep 60
