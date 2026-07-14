@@ -123,15 +123,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Shorten workspace path via subst (fixes CMake MAX_PATH + Defender race condition)
-        shell: pwsh
-        run: |
-          $shortDrive = 'B:'
-          subst $shortDrive $env:GITHUB_WORKSPACE
-          echo "GITHUB_WORKSPACE=$shortDrive\" >> $env:GITHUB_ENV
-          Write-Host "Mapped $shortDrive → $env:GITHUB_WORKSPACE"
-          Write-Host "Workspace shortened from $($env:GITHUB_WORKSPACE.Length) chars to 2 chars"
-
       - name: Disable Windows Defender real-time scanning (prevents ninja manifest lock contention)
         shell: pwsh
         run: |
@@ -142,6 +133,21 @@ jobs:
           catch {
             Write-Warning "Could not disable Defender: $($_.Exception.Message)"
           }
+
+      - name: Clone to short path (fixes CMake MAX_PATH — subst/symlinks get resolved, real path doesn't)
+        shell: pwsh
+        run: |
+          $shortPath = 'C:\b'
+          if (Test-Path $shortPath) {
+            Remove-Item -Recurse -Force $shortPath
+          }
+          # Local clone uses hardlinks (very fast, no data duplication)
+          git clone $env:GITHUB_WORKSPACE $shortPath
+          echo "GITHUB_WORKSPACE=$shortPath" >> $env:GITHUB_ENV
+          Write-Host "Repo cloned to short path: $shortPath (real physical directory)"
+          Write-Host "Base path reduced from $($env:GITHUB_WORKSPACE_ORIG.Length) chars to $($shortPath.Length) chars"
+        env:
+          GITHUB_WORKSPACE_ORIG: ${{ github.workspace }}
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
