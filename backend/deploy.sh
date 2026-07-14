@@ -38,14 +38,10 @@ DEPLOY_ID=$(echo "$RESPONSE" | grep -o '"deployId"[^"]*"[^"]*"' | grep -o '[^"]*
 if [ -n "$DEPLOY_ID" ]; then
   echo "✅ Deploy triggered! ID: $DEPLOY_ID"
   echo ""
-  echo "Track progress:"
-  echo "   https://dashboard.render.com/web/srv-xxx/deploys/$DEPLOY_ID"
+  echo "Track progress at:"
+  echo "   https://dashboard.render.com/web/srv-d936rg4m0tmc73d2iql0/deploys/$DEPLOY_ID"
   echo ""
-  echo "Or wait for completion:"
-  echo "   while true; do"
-  echo "     curl -s \"$HOOK_URL\" | jq .status 2>/dev/null && break"
-  echo "     sleep 10"
-  echo "   done"
+else
 else
   echo "⚠️  Response: $RESPONSE"
   echo ""
