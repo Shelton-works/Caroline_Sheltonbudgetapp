@@ -376,8 +376,8 @@ jobs:
           echo "✅ Backend deploy triggered! Track at:"
           echo "   https://dashboard.render.com"
 
-      - name: Wait for deploy to complete
+      - name: Wait for deploy to initialize
         run: |
-          echo "⏳ Waiting 60s for deploy to start..."
+          echo "⏳ Waiting 60s for deploy to start building..."
           sleep 60
-          echo "✅ Done — check Render dashboard for status." >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deploy triggered — check Render dashboard for status." > /dev/null
